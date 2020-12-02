@@ -8,5 +8,5 @@
 
 class SphericalFunction {
 public:
-    virtual float eval(const glm::vec3& v) = 0;
+    virtual float eval(const glm::vec3& v) const = 0;
 };

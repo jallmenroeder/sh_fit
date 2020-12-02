@@ -12,7 +12,7 @@ SphericalHarmonics::SphericalHarmonics(int order)
   m_coeffs(std::make_shared<std::vector<float>>(m_NUM_COEFFS, 0.f)) {}
 
 
-float SphericalHarmonics::eval(const glm::vec3& V) {
+float SphericalHarmonics::eval(const glm::vec3& V) const {
     return eval_SH(V, *m_coeffs, m_ORDER);
 }
 
