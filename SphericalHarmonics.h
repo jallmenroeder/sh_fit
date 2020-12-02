@@ -9,10 +9,12 @@
 #include <vector>
 #include <memory>
 
-class SphericalHarmonics {
+#include "SphericalFunction.h"
+
+class SphericalHarmonics : public SphericalFunction {
 public:
     explicit SphericalHarmonics(int order);
-    float eval(const glm::vec3& V);
+    float eval(const glm::vec3& V) override;
     std::shared_ptr<std::vector<float>> getCoeffs() { return m_coeffs; }
     void setCoeffs(std::shared_ptr<std::vector<float>> coeffs);
 
