@@ -8,8 +8,9 @@ INCLUDE_DIRECTORIES( "/usr/include/boost" )
 
 add_executable(sh_fit_cpp
         main.cpp
-        BRDF.h
         Util.h
+        BRDF.h
+        BRDF.cpp
         SphericalHarmonics.h
         SphericalHarmonics.cpp
         SphericalFunction.h
