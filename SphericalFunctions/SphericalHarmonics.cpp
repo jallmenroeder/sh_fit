@@ -4,7 +4,7 @@
 
 #include "SphericalHarmonics.h"
 
-#include "Util.h"
+#include "../Util.h"
 
 SphericalHarmonics::SphericalHarmonics(int order)
 : m_ORDER(order),

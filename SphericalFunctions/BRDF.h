@@ -6,7 +6,7 @@
 
 #include <glm/glm.hpp>
 
-#include "Util.h"
+#include "../Util.h"
 #include "SphericalFunction.h"
 
 static const float F0 = .4f;

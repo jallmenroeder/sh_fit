@@ -2,8 +2,7 @@
 #include <glm/glm.hpp>
 
 #include "Util.h"
-#include "BRDF.h"
-#include "SphericalHarmonics.h"
+#include "SphericalFunctions/BRDF.h"
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
@@ -13,14 +12,14 @@ int main() {
     std::cout << spherical.theta << ", " << spherical.phi << std::endl;
     cartesian = sphericalToCartesian(spherical);
     std::cout << cartesian.x << ", " << cartesian.y << ", " << cartesian.z << std::endl;
-    float pdf = 0.f;
     glm::vec3 a{3.f, 0.5f, 0.5f};
     glm::vec3 b{0.f, -0.5f, 0.5f};
     glm::vec3 c{0.f, -0.5f, 0.8f};
     a = glm::normalize(a);
     b = glm::normalize(b);
     c = glm::normalize(c);
-    std::cout << "GGX: " << eval_ggx(a, b, .2, pdf) << std::endl;
-    std::cout << "GGX: " << eval_ggx(a, c, .2, pdf) << std::endl;
+    BRDF ggx(a, .2);
+    std::cout << "GGX: " << ggx.eval(b) << std::endl;
+    std::cout << "GGX: " << ggx.eval(c) << std::endl;
     return 0;
 }
