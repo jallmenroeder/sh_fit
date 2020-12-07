@@ -7,16 +7,16 @@
 #include <glm/glm.hpp>
 
 #include "../Util.h"
-#include "SphericalFunction.h"
+#include "BRDF.h"
 
 static const float F0 = .4f;
 
-class GGX_BRDF {
+class GGX_BRDF : public BRDF {
 public:
     GGX_BRDF(const glm::vec3 view_dir, float roughness) : m_view_dir(view_dir), m_roughness(roughness) {}
 
-    float eval(const glm::vec3& V, float& pdf) const;
-    glm::vec3 sample(const glm::vec2& uv) const;
+    float eval(const glm::vec3& V, float& pdf) const override;
+    glm::vec3 sample(const glm::vec2& uv) const override;
 
 private:
     static float eval_ggx(const glm::vec3& V, const glm::vec3& L, float roughness, float& pdf);
