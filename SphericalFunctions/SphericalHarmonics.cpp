@@ -7,13 +7,36 @@
 #include "../Util.h"
 
 SphericalHarmonics::SphericalHarmonics(int order)
-: m_ORDER(order),
-  m_NUM_COEFFS((order + 1) * (order + 1)),
-  m_coeffs(std::make_shared<std::vector<float>>(m_NUM_COEFFS, 0.f)) {}
+        : m_ORDER(order),
+          m_NUM_COEFFS((order + 1) * (order + 1)),
+          m_coeffs(std::make_shared<std::vector<float>>(m_NUM_COEFFS, 0.f)) {}
 
 
 float SphericalHarmonics::eval(const glm::vec3& V) const {
     return eval_SH(V, *m_coeffs, m_ORDER);
+}
+
+
+gsl_matrix* SphericalHarmonics::create_lls_matrix(const std::vector<glm::vec3>& lin_trans_samples,
+                                                  const std::vector<float>& weights) const {
+    gsl_matrix* mat = gsl_matrix_alloc(lin_trans_samples.size(), m_NUM_COEFFS);
+
+    std::vector<Spherical> spherical_samples(lin_trans_samples.size());
+    for (int i = 0; i < lin_trans_samples.size(); i++) {
+        spherical_samples[i] = cartesianToSpherical(lin_trans_samples[i]);
+    }
+
+    for (int row = 0; row < lin_trans_samples.size(); row++) {
+        int column = 0;
+        for (int l = 0; l <= m_ORDER; l++) {
+            for (int m = -l; m <= l; m++) {
+                double sh_basis_function = boost::math::spherical_harmonic_r(l, m, spherical_samples[row].theta,
+                                                                             spherical_samples[row].phi);
+                gsl_matrix_set(mat, row, column, sh_basis_function * weights[row]);
+                column++;
+            }
+        }
+    }
 }
 
 

@@ -13,11 +13,12 @@ public:
     explicit ClampedCosine(float amplitude) : m_amplitude(amplitude) {}
 
     void setAmplitude(float amplitude) { m_amplitude = amplitude; }
+
     float getAmplitude() const { return m_amplitude; }
 
-    float eval(const glm::vec3& v) const override {
-        return m_amplitude * fmaxf(v.z, 0.f);
-    }
+    float eval(const glm::vec3& V) const override;
+    gsl_matrix* create_lls_matrix(const std::vector<glm::vec3>& samples,
+                                  const std::vector<float>& weights) const override;
 
 private:
     float m_amplitude;

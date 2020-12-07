@@ -14,6 +14,7 @@ add_executable(sh_fit_cpp
         SphericalFunctions/SphericalHarmonics.h
         SphericalFunctions/SphericalHarmonics.cpp
         SphericalFunctions/SphericalFunction.h
-        SphericalFunctions/ClampedCosine.h)
+        SphericalFunctions/ClampedCosine.h
+        SphericalFunctions/ClampedCosine.cpp)
 
 TARGET_LINK_LIBRARIES( sh_fit_cpp LINK_PUBLIC ${Boost_LIBRARIES} )
