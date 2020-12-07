@@ -2,10 +2,10 @@
 // Created by jallmenroeder on 02/12/2020.
 //
 
-#include "BRDF.h"
+#include "GGX_BRDF.h"
 
 
-float BRDF::eval_ggx(const glm::vec3& V, const glm::vec3& L, float roughness, float& pdf) {
+float GGX_BRDF::eval_ggx(const glm::vec3& V, const glm::vec3& L, float roughness, float& pdf) {
 
     if (V.z <= 0.f || L.z <= 0.f) {
         pdf = 0.f;
@@ -32,7 +32,7 @@ float BRDF::eval_ggx(const glm::vec3& V, const glm::vec3& L, float roughness, fl
 }
 
 
-glm::vec3 BRDF::sample(const glm::vec2& uv) const {
+glm::vec3 GGX_BRDF::sample(const glm::vec2& uv) const {
     const float phi = 2.0f * M_PIf32 * uv.x;
     const float r = m_roughness * sqrtf(uv.y / (1.0f - uv.y));
     const glm::vec3 N = normalize(glm::vec3(r * cosf(phi), r * sinf(phi), 1.0f));
@@ -40,6 +40,6 @@ glm::vec3 BRDF::sample(const glm::vec2& uv) const {
 }
 
 
-float BRDF::eval(const glm::vec3& v, float& pdf) const {
+float GGX_BRDF::eval(const glm::vec3& v, float& pdf) const {
     return eval_ggx(m_view_dir, v, m_roughness, pdf);
 }

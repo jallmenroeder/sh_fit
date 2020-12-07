@@ -2,7 +2,7 @@
 #include <glm/glm.hpp>
 
 #include "Util.h"
-#include "SphericalFunctions/BRDF.h"
+#include "SphericalFunctions/GGX_BRDF.h"
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
@@ -18,7 +18,7 @@ int main() {
     a = glm::normalize(a);
     b = glm::normalize(b);
     c = glm::normalize(c);
-    BRDF ggx(a, .2);
+    GGX_BRDF ggx(a, .2);
     float pdf = 0.f;
     std::cout << "GGX: " << ggx.eval(b, pdf) << std::endl;
     std::cout << "GGX: " << ggx.eval(c, pdf) << std::endl;

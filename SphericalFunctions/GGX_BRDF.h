@@ -11,9 +11,9 @@
 
 static const float F0 = .4f;
 
-class BRDF {
+class GGX_BRDF {
 public:
-    BRDF(const glm::vec3 view_dir, float roughness) : m_view_dir(view_dir), m_roughness(roughness) {}
+    GGX_BRDF(const glm::vec3 view_dir, float roughness) : m_view_dir(view_dir), m_roughness(roughness) {}
 
     float eval(const glm::vec3& V, float& pdf) const;
     glm::vec3 sample(const glm::vec2& uv) const;
