@@ -19,7 +19,8 @@ int main() {
     b = glm::normalize(b);
     c = glm::normalize(c);
     BRDF ggx(a, .2);
-    std::cout << "GGX: " << ggx.eval(b) << std::endl;
-    std::cout << "GGX: " << ggx.eval(c) << std::endl;
+    float pdf = 0.f;
+    std::cout << "GGX: " << ggx.eval(b, pdf) << std::endl;
+    std::cout << "GGX: " << ggx.eval(c, pdf) << std::endl;
     return 0;
 }
