@@ -15,19 +15,16 @@ class SphericalHarmonics : public SphericalFunction {
 public:
     explicit SphericalHarmonics(int order);
     float eval(const glm::vec3& V) const override;
-    gsl_matrix* create_lls_matrix(const std::vector<glm::vec3>& lin_trans_samples,
-                                  const std::vector<float>& weights) const override;
+    float eval_basis(const glm::vec3& V, int idx) const override;
 
-    std::shared_ptr<std::vector<float>> getCoeffs() { return m_coeffs; }
+    void setCoefficients(std::unique_ptr<std::vector<float>> coeffs) override;
 
-    void setCoeffs(std::shared_ptr<std::vector<float>> coeffs);
+    int numCoefficients() const override { return m_NUM_COEFFS; }
 
 private:
     const int m_ORDER;
     const int m_NUM_COEFFS;
-    std::shared_ptr<std::vector<float>> m_coeffs;
-
-    static float eval_SH(const glm::vec3& V, const std::vector<float>& coefficients, int order);
+    std::unique_ptr<std::vector<float>> m_coeffs;
 };
 
 

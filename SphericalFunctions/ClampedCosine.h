@@ -12,13 +12,13 @@ class ClampedCosine : public SphericalFunction {
 public:
     explicit ClampedCosine(float amplitude) : m_amplitude(amplitude) {}
 
-    void setAmplitude(float amplitude) { m_amplitude = amplitude; }
+    void setCoefficients(std::unique_ptr<std::vector<float>> coeffs) override;
 
-    float getAmplitude() const { return m_amplitude; }
+    int numCoefficients() const override { return 1; }
 
     float eval(const glm::vec3& V) const override;
-    gsl_matrix* create_lls_matrix(const std::vector<glm::vec3>& samples,
-                                  const std::vector<float>& weights) const override;
+
+    float eval_basis(const glm::vec3& V, int idx) const override;
 
 private:
     float m_amplitude;
