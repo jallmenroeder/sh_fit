@@ -3,6 +3,8 @@ project(sh_fit_cpp)
 
 set(CMAKE_CXX_STANDARD 11)
 
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
 FIND_PACKAGE( Boost REQUIRED )
 INCLUDE_DIRECTORIES( "/usr/include/boost" )
 FIND_PACKAGE(GSL REQUIRED)
