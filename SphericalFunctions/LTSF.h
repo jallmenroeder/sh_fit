@@ -14,10 +14,12 @@ class LTSF : public BRDF {
 public:
     LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat3& M, const glm::vec3& view_dir,
          float roughness);
-    float eval(const glm::vec3& V, float& pdf) const override;
-    float eval_ltsf_basis(const glm::vec3& V, int idx) const;
+    float eval(const glm::vec3& V) const override;
+    float pdf(const glm::vec3& V) const override;
+    float evalLtsfBasis(const glm::vec3& V, int idx) const;
     glm::vec3 sample(const glm::vec2& uv) const override;
     void findFit();
+    double calculateError(int resolution) const;
 
 private:
     glm::vec3 linearly_transform_vec(const glm::vec3& V, float& jacobian) const;

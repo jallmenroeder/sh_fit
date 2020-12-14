@@ -12,6 +12,7 @@
  */
 class BRDF {
 public:
-    virtual float eval(const glm::vec3& V, float& pdf) const = 0;
+    virtual float eval(const glm::vec3& V) const = 0;
+    virtual float pdf(const glm::vec3& V) const = 0;
     virtual glm::vec3 sample(const glm::vec2& uv) const = 0;
 };

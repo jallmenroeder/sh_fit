@@ -22,10 +22,7 @@ LTSF::LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat
         m_roughness(roughness) {}
 
 
-float LTSF::eval(const glm::vec3& V, float& pdf) const {
-    // constant pdf due to uniform sampling
-    pdf = 1.f / 2.f * M_PIf32;
-
+float LTSF::eval(const glm::vec3& V) const {
     // evaluate original spherical function
     float jacobian;
     glm::vec3 trans_V = linearly_transform_vec(V, jacobian);
@@ -33,7 +30,12 @@ float LTSF::eval(const glm::vec3& V, float& pdf) const {
 }
 
 
-float LTSF::eval_ltsf_basis(const glm::vec3& V, int idx) const {
+float LTSF::pdf(const glm::vec3& V) const {
+    return 1.f / 2.f * M_PIf32;
+}
+
+
+float LTSF::evalLtsfBasis(const glm::vec3& V, int idx) const {
     float jacobian;
     glm::vec3 trans_V = linearly_transform_vec(V, jacobian);
     return m_spherical_function->eval_basis(trans_V, idx) * jacobian;
@@ -48,73 +50,55 @@ glm::vec3 LTSF::sample(const glm::vec2& uv) const {
 
 
 void LTSF::findFit() {
-//    int rows = NUM_SAMPLES * NUM_SAMPLES * 2;
-    int rows = NUM_SAMPLES * NUM_SAMPLES * 4;
+    int rows = NUM_SAMPLES * NUM_SAMPLES * 2;
     int columns = m_spherical_function->numCoefficients();
     auto gsl_mat = gsl_matrix_alloc(rows, columns);
     auto gsl_cov = gsl_matrix_alloc(columns, columns);
     auto gsl_target_vector = gsl_vector_alloc(rows);
     auto gsl_coefficients = gsl_vector_alloc(columns);
-
-    float pdf_ltsf = 1.f / 2.f * M_PIf32;
-//    int row_idx = 0;
+    int row_idx = 0;
 
     std::vector<float> jacobian(rows);
-//    for (int i = 0; i < NUM_SAMPLES; i++) {
-//        for (int j = 0; j < NUM_SAMPLES; j++) {
     for (int i = 0; i < NUM_SAMPLES; i++) {
-        for (int j = 0; j < 4 * NUM_SAMPLES; j++) {
-            int row_idx = i * 4 * NUM_SAMPLES + j;
-            const float theta = ((float)i + 0.5f) / (float)NUM_SAMPLES * M_PIf32 / 2.f;
-            const float phi = ((float)j + 0.5f) / (float)NUM_SAMPLES * M_PIf32 * 2.f;
+        for (int j = 0; j < NUM_SAMPLES; j++) {
+            const float u = ((float)j + 0.5f) / (float)NUM_SAMPLES;
+            const float v = ((float)i + 0.5f) / (float)NUM_SAMPLES;
+            glm::vec2 uv(u, v);
 
-            auto V = sphericalToCartesian({theta, phi});
-            float _;
-            float eval_target = m_target_function->eval(V, _);
-            float weight = sinf(theta);
-            for (int column_idx = 0; column_idx < columns; column_idx++) {
-                float eval_ltsf = eval_ltsf_basis(V, column_idx);
-                gsl_matrix_set(gsl_mat, row_idx, column_idx, eval_ltsf * weight);
+            // sample LTSF
+            {
+                glm::vec3 V = sample(uv);
+                float pdf_target = m_target_function->pdf(V);
+                float eval_target = m_target_function->eval(V);
+                float pdf_ltsf = pdf(V);
+                float weight = pdf_ltsf / (pdf_target + pdf_ltsf);
+
+                for (int column_idx = 0; column_idx < columns; column_idx++) {
+                    float eval_ltsf = evalLtsfBasis(V, column_idx);
+                    gsl_matrix_set(gsl_mat, row_idx, column_idx, eval_ltsf * weight);
+                }
+                // we seek a fit for the cosine weighted BRDF, therefore V.z
+                gsl_vector_set(gsl_target_vector, row_idx, eval_target * fmax(0.f, V.z) * weight);
             }
-            // we seek a fit for the cosine weighted BRDF, therefore cos(theta)
-            gsl_vector_set(gsl_target_vector, row_idx, eval_target * cosf(theta) * weight);
 
-//            const float u = ((float)j + 0.5f) / (float)NUM_SAMPLES;
-//            const float v = ((float)i + 0.5f) / (float)NUM_SAMPLES;
-//            glm::vec2 uv(u, v);
-//
-//            // sample LTSF
-//            {
-//                glm::vec3 V = sample(uv);
-//                float pdf_target;
-//                float eval_target = m_target_function->eval(V, pdf_target);
-//                float weight = pdf_ltsf / (pdf_target + pdf_ltsf);
-//
-//                for (int column_idx = 0; column_idx < columns; column_idx++) {
-//                    float eval_ltsf = eval_ltsf_basis(V, column_idx);
-//                    gsl_matrix_set(gsl_mat, row_idx, column_idx, eval_ltsf * weight);
-//                }
-//                // we seek a fit for the cosine weighted BRDF, therefore V.z
-//                gsl_vector_set(gsl_target_vector, row_idx, eval_target * fmax(0.f, V.z) * weight);
-//            }
-//
-//            row_idx++;
-//
-//            // sample BRDF
-//            {
-//                glm::vec3 V = m_target_function->sample(uv);
-//                float pdf_target;
-//                float eval_brdf = m_target_function->eval(V, pdf_target);
-//                float weight = pdf_target / (pdf_target + pdf_ltsf);
-//
-//                for (int column_idx = 0; column_idx < columns; column_idx++) {
-//                    float eval_ltsf = eval_ltsf_basis(V, column_idx);
-//                    gsl_matrix_set(gsl_mat, row_idx, column_idx, eval_ltsf * weight);
-//                }
-//                // we seek a fit for the cosine weighted BRDF, therefore V.z
-//                gsl_vector_set(gsl_target_vector, row_idx, eval_brdf * fmax(0.f, V.z) * weight);
-//            }
-//            row_idx++;
+            row_idx++;
+
+            // sample BRDF
+            {
+                glm::vec3 V = m_target_function->sample(uv);
+                float pdf_target = m_target_function->pdf(V);
+                float eval_brdf = m_target_function->eval(V);
+                float pdf_ltsf = pdf(V);
+                float weight = pdf_target / (pdf_target + pdf_ltsf);
+
+                for (int column_idx = 0; column_idx < columns; column_idx++) {
+                    float eval_ltsf = evalLtsfBasis(V, column_idx);
+                    gsl_matrix_set(gsl_mat, row_idx, column_idx, eval_ltsf * weight);
+                }
+                // we seek a fit for the cosine weighted BRDF, therefore V.z
+                gsl_vector_set(gsl_target_vector, row_idx, eval_brdf * fmax(0.f, V.z) * weight);
+            }
+            row_idx++;
         }
     }
 
@@ -139,6 +123,24 @@ void LTSF::findFit() {
     gsl_matrix_free(gsl_mat);
     gsl_vector_free(gsl_target_vector);
     gsl_vector_free(gsl_coefficients);
+}
+
+
+// calculates mean squared error over hemisphere
+double LTSF::calculateError(int resolution) const {
+    double error = 0.;
+    for (int i = 0; i < resolution; i++) {
+        for (int j = 0; j < 4 * resolution; j++) {
+            float theta = ((float)i + .5f) / (float)resolution / 2.f * M_PIf32;
+            float phi = ((float)j + .5f) / (float)resolution / 4.f / 2.f * M_PIf32;
+
+            auto V = sphericalToCartesian({theta, phi});
+            double current_error = abs(eval(V) - m_target_function->eval(V));
+            current_error *= current_error;
+            error += current_error * sin(theta);
+        }
+    }
+    return sqrt(error / (4. * (double)resolution * (double)resolution));
 }
 
 
