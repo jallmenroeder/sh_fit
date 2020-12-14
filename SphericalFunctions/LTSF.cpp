@@ -31,7 +31,7 @@ float LTSF::eval(const glm::vec3& V) const {
 
 
 float LTSF::pdf(const glm::vec3& V) const {
-    return 1.f / 2.f * M_PIf32;
+    return V.z / M_PIf32;
 }
 
 
@@ -41,11 +41,28 @@ float LTSF::evalLtsfBasis(const glm::vec3& V, int idx) const {
     return m_spherical_function->eval_basis(trans_V, idx) * jacobian;
 }
 
-// uniform sampling on the hemisphere
+// cosine weighted sampling on the hemisphere
+// see http://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations.html#Cosine-WeightedHemisphereSampling
 glm::vec3 LTSF::sample(const glm::vec2& uv) const {
-    const float pi_2_v = 2.f * M_PIf32 * uv.y;
-    const float sqrt_1_u = sqrtf(1.f - uv.x * uv.x);
-    return glm::normalize(glm::vec3(cosf(pi_2_v) * sqrt_1_u, sinf(pi_2_v) * sqrt_1_u, uv.y));
+    // map uv to [-1,1]
+    glm::vec2 mapped_uv = 2.f * uv - glm::vec2(1.f, 1.f);
+    glm::vec2 disc_sample;
+    // handle degeneracy at origin
+    if (mapped_uv.x == 0.f && mapped_uv.y == 0.f) {
+        disc_sample = glm::vec2(0.f, 0.f);
+    } else {
+        float theta, r;
+        if (abs(mapped_uv.x) > abs(mapped_uv.y)) {
+            r = mapped_uv.x;
+            theta = M_PIf32 * (mapped_uv.y / mapped_uv.x) / 4.f;
+        } else {
+            r = mapped_uv.y;
+            theta = M_PIf32 / 2.f - M_PIf32 / 4.f * (mapped_uv.x / mapped_uv.y);
+        }
+        disc_sample = r * glm::vec2(std::cos(theta), std::sin(theta));
+    }
+    float z = std::sqrt(std::max(0.f, 1.f - disc_sample.x * disc_sample.x - disc_sample.y * disc_sample.y));
+    return {disc_sample.x, disc_sample.y, z};
 }
 
 
@@ -135,7 +152,7 @@ double LTSF::calculateError(int resolution) const {
             float phi = ((float)j + .5f) / (float)resolution / 4.f / 2.f * M_PIf32;
 
             auto V = sphericalToCartesian({theta, phi});
-            double current_error = abs(eval(V) - m_target_function->eval(V));
+            double current_error = eval(V) - m_target_function->eval(V);
             current_error *= current_error;
             error += current_error * sin(theta);
         }
