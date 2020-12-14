@@ -36,7 +36,7 @@ glm::vec3 GGX_BRDF::sample(const glm::vec2& uv) const {
     const float phi = 2.0f * M_PIf32 * uv.x;
     const float r = m_roughness * sqrtf(uv.y / (1.0f - uv.y));
     const glm::vec3 N = normalize(glm::vec3(r * cosf(phi), r * sinf(phi), 1.0f));
-    return -m_view_dir + 2.0f * N * dot(N, m_view_dir);
+    return glm::normalize(-m_view_dir + 2.0f * N * dot(N, m_view_dir));
 }
 
 
