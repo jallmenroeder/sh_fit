@@ -6,6 +6,8 @@
 
 #include <glm/glm.hpp>
 
+constexpr int NUM_SAMPLES = 128;
+
 struct Spherical {
     float theta, phi;
 };
@@ -14,7 +16,7 @@ static glm::vec3 sphericalToCartesian(const Spherical& in) {
     return {
             sinf(in.theta) * cosf(in.phi),
             sinf(in.theta) * sinf(in.phi),
-        cosf(in.theta)
+            cosf(in.theta)
     };
 }
 
