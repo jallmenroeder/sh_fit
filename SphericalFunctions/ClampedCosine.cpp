@@ -5,12 +5,18 @@
 #include "ClampedCosine.h"
 
 
-void ClampedCosine::setCoefficients(std::unique_ptr<std::vector<float>> coeffs) {
+void ClampedCosine::setCoefficients(std::shared_ptr<std::vector<float>> coeffs) {
     if (coeffs->size() != 1) {
-        printf("Error, clamped cosine can only handle 1 coefficient but got %d", coeffs->size());
+        printf("Error, clamped cosine can only handle 1 coefficient but got %ld", coeffs->size());
         return;
     }
     m_amplitude = (*coeffs)[0];
+}
+
+
+std::shared_ptr<std::vector<float>> ClampedCosine::getCoefficients() {
+    std::vector<float> coeffs = {m_amplitude};
+    return std::make_shared<std::vector<float>>(coeffs);
 }
 
 

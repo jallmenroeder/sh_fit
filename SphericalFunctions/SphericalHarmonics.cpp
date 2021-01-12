@@ -35,11 +35,16 @@ float SphericalHarmonics::eval_basis(const glm::vec3& V, int idx) const {
 }
 
 
-void SphericalHarmonics::setCoefficients(std::unique_ptr<std::vector<float>> coeffs) {
+void SphericalHarmonics::setCoefficients(std::shared_ptr<std::vector<float>> coeffs) {
     if (coeffs->size() != m_NUM_COEFFS) {
-        printf("Error, SH order was %d, needing %d coefficients but got %d coefficients, defaulting to 0 instead",
+        printf("Error, SH order was %d, needing %d coefficients but got %ld coefficients, defaulting to 0 instead",
                m_ORDER, m_NUM_COEFFS, coeffs->size());
         return;
     }
     m_coeffs = std::move(coeffs);
+}
+
+
+std::shared_ptr<std::vector<float>> SphericalHarmonics::getCoefficients() {
+    return m_coeffs;
 }

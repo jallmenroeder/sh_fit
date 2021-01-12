@@ -17,14 +17,15 @@ public:
     float eval(const glm::vec3& V) const override;
     float eval_basis(const glm::vec3& V, int idx) const override;
 
-    void setCoefficients(std::unique_ptr<std::vector<float>> coeffs) override;
+    void setCoefficients(std::shared_ptr<std::vector<float>> coeffs) override;
+    std::shared_ptr<std::vector<float>> getCoefficients() override;
 
     int numCoefficients() const override { return m_NUM_COEFFS; }
 
 private:
     const int m_ORDER;
     const int m_NUM_COEFFS;
-    std::unique_ptr<std::vector<float>> m_coeffs;
+    std::shared_ptr<std::vector<float>> m_coeffs;
 };
 
 
