@@ -5,10 +5,10 @@
 #pragma once
 
 #include <memory>
+#include <gsl/gsl_vector.h>
 
 #include "BRDF.h"
 #include "SphericalFunction.h"
-#include "gsl/gsl_vector.h"
 
 
 class LTSF : public BRDF {
@@ -24,7 +24,7 @@ public:
     float evalLtsfBasis(const glm::vec3& V, int idx) const;
 
     glm::vec3 sample(const glm::vec2& uv) const override;
-    void findSphericalExpansion();
+    double findSphericalExpansion();
     double calculateError() const;
 
     /**
@@ -36,11 +36,12 @@ public:
      *                                  / a 0 b \
      *                  (a, b, c, d) -> | 0 c 0 |
      *                                  \ d 0 1 /
-     * @param params    possible parameters, is needed by GSL specification but not used here
+     * @param params    pointer to the LTSF instance since this function must be static
      * @return          difference between LTSF and target function
      */
-    double minimizeFunc(const gsl_vector* x, void* params);
+    static double minimizeFunc(const gsl_vector* x, void* params);
 
+    void findFit();
 private:
     glm::vec3 linearly_transform_vec(const glm::vec3& V, float& jacobian) const;
 

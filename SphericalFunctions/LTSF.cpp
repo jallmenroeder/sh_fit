@@ -5,6 +5,7 @@
 #include "LTSF.h"
 
 #include <gsl/gsl_multifit.h>
+#include <gsl/gsl_multimin.h>
 #include <iostream>
 
 #include "../Util.h"
@@ -82,7 +83,7 @@ glm::vec3 LTSF::sample(const glm::vec2& uv) const {
 }
 
 
-void LTSF::findSphericalExpansion() {
+double LTSF::findSphericalExpansion() {
     int rows = NUM_SAMPLES * NUM_SAMPLES * 2;
     int columns = m_spherical_function->numCoefficients();
     auto gsl_mat = gsl_matrix_alloc(rows, columns);
@@ -143,19 +144,17 @@ void LTSF::findSphericalExpansion() {
 
     // set fitted coefficients to spherical function
     auto coefficients = std::unique_ptr<std::vector<float>>(new std::vector<float>(columns));
-    std::cout << "Chi Squared: " << chi_squared << std::endl;
-    std::cout << "Coefficients: ";
     for (int column = 0; column < columns; column++) {
         (*coefficients)[column] = gsl_vector_get(gsl_coefficients, column);
-        std::cout << (*coefficients)[column] << " ";
     }
-    std::cout << std::endl;
     m_spherical_function->setCoefficients(std::move(coefficients));
 
     // free resource from gsl variables
     gsl_matrix_free(gsl_mat);
     gsl_vector_free(gsl_target_vector);
     gsl_vector_free(gsl_coefficients);
+
+    return chi_squared;
 }
 
 
@@ -178,12 +177,87 @@ double LTSF::calculateError() const {
 
 
 double LTSF::minimizeFunc(const gsl_vector* x, void* params) {
+    auto ltsf = static_cast<LTSF*>(params);
     glm::mat3 M(gsl_vector_get(x, 0), 0.f, gsl_vector_get(x, 1),
                 0.f, gsl_vector_get(x, 2), 0.f,
                 gsl_vector_get(x, 3), 0.f, 1.f);
-    update(M);
-    findSphericalExpansion();
-    return calculateError();
+    ltsf->update(M);
+    ltsf->findSphericalExpansion();
+//    return ltsf->findSphericalExpansion();
+    return ltsf->calculateError();
+}
+
+
+void LTSF::findFit() {
+    const gsl_multimin_fminimizer_type *T =
+            gsl_multimin_fminimizer_nmsimplex2;
+    gsl_multimin_fminimizer *minimizer_workspace = nullptr;
+    gsl_vector *step_size, *x;
+    gsl_multimin_function minex_func;
+
+    size_t iter = 0;
+    int status;
+    double size;
+
+    // Starting point
+    // TODO: use LTC parameter as starting point
+    x = gsl_vector_alloc(4);
+    gsl_vector_set(x, 0, 0.688);
+    gsl_vector_set(x, 1, 0.375);
+    gsl_vector_set(x, 2, 0.561);
+    gsl_vector_set(x, 3, -0.965);
+
+    // Set initial step sizes to 1
+    step_size = gsl_vector_alloc(4);
+    gsl_vector_set_all(step_size, 0.05f);
+
+    // Initialize method and iterate
+    minex_func.n = 4;
+    minex_func.f = minimizeFunc;
+    minex_func.params = static_cast<void*>(this);
+
+    minimizer_workspace = gsl_multimin_fminimizer_alloc(T, 4);
+    gsl_multimin_fminimizer_set(minimizer_workspace, &minex_func, x, step_size);
+
+    do
+    {
+        iter++;
+        status = gsl_multimin_fminimizer_iterate(minimizer_workspace);
+
+        if (status)
+            break;
+
+        size = gsl_multimin_fminimizer_size(minimizer_workspace);
+        status = gsl_multimin_test_size(size, 1e-2);
+
+        if (status == GSL_SUCCESS)
+        {
+            printf ("converged to minimum at\n");
+        }
+
+        printf ("%5d %10.3e %10.3e %10.3e %10.3e f() = %7.3f size = %.3f\n",
+                iter,
+                gsl_vector_get(minimizer_workspace->x, 0),
+                gsl_vector_get(minimizer_workspace->x, 1),
+                gsl_vector_get(minimizer_workspace->x, 2),
+                gsl_vector_get(minimizer_workspace->x, 3),
+                minimizer_workspace->fval, size);
+    }
+    while (status == GSL_CONTINUE && iter < 100);
+
+    auto coeffs = m_spherical_function->getCoefficients();
+    printf("coefficients: ");
+    for (auto coeff: *coeffs) {
+        printf("%f ", coeff);
+    }
+    printf("\n");
+    printf("Error: %f \n", calculateError());
+
+    gsl_vector_free(x);
+    gsl_vector_free(step_size);
+    gsl_multimin_fminimizer_free(minimizer_workspace);
+
+    //return status;
 }
 
 
