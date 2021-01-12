@@ -22,6 +22,22 @@ LTSF::LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat
         m_roughness(roughness) {}
 
 
+void LTSF::update(const glm::mat3 &M) {
+    if (abs(glm::determinant(M)) < FLT_EPSILON) {
+        m_M = glm::mat3(1.f);
+    } else {
+        m_M = M;
+    }
+    m_M_inv = glm::inverse(m_M);
+    m_det_M_inv = glm::determinant(m_M_inv);
+}
+
+
+void LTSF::setErrorResolution(int resolution) {
+    m_error_resolution = resolution;
+}
+
+
 float LTSF::eval(const glm::vec3& V) const {
     // evaluate original spherical function
     float jacobian;
@@ -66,7 +82,7 @@ glm::vec3 LTSF::sample(const glm::vec2& uv) const {
 }
 
 
-void LTSF::findFit() {
+void LTSF::findSphericalExpansion() {
     int rows = NUM_SAMPLES * NUM_SAMPLES * 2;
     int columns = m_spherical_function->numCoefficients();
     auto gsl_mat = gsl_matrix_alloc(rows, columns);
@@ -144,12 +160,12 @@ void LTSF::findFit() {
 
 
 // calculates mean squared error over hemisphere
-double LTSF::calculateError(int resolution) const {
+double LTSF::calculateError() const {
     double error = 0.;
-    for (int i = 0; i < resolution; i++) {
-        for (int j = 0; j < 4 * resolution; j++) {
-            float theta = ((float)i + .5f) / (float)resolution / 2.f * M_PIf32;
-            float phi = ((float)j + .5f) / (float)resolution / 4.f / 2.f * M_PIf32;
+    for (int i = 0; i < m_error_resolution; i++) {
+        for (int j = 0; j < 4 * m_error_resolution; j++) {
+            float theta = ((float)i + .5f) / (float)m_error_resolution / 2.f * M_PIf32;
+            float phi = ((float)j + .5f) / (float)m_error_resolution / 4.f / 2.f * M_PIf32;
 
             auto V = sphericalToCartesian({theta, phi});
             double current_error = eval(V) - m_target_function->eval(V);
@@ -157,7 +173,17 @@ double LTSF::calculateError(int resolution) const {
             error += current_error * sin(theta);
         }
     }
-    return sqrt(error / (4. * (double)resolution * (double)resolution));
+    return sqrt(error / (4. * (double)m_error_resolution * (double)m_error_resolution));
+}
+
+
+double LTSF::minimizeFunc(const gsl_vector* x, void* params) {
+    glm::mat3 M(gsl_vector_get(x, 0), 0.f, gsl_vector_get(x, 1),
+                0.f, gsl_vector_get(x, 2), 0.f,
+                gsl_vector_get(x, 3), 0.f, 1.f);
+    update(M);
+    findSphericalExpansion();
+    return calculateError();
 }
 
 

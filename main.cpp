@@ -20,7 +20,7 @@ int main() {
 //                0., 0.49071796, 0.,
 //                -0.90142154, 0., 1.);
     LTSF ltsf = LTSF(std::unique_ptr<SphericalFunction>(sf), M, view_dir, roughness);
-    ltsf.findFit();
+    ltsf.findSphericalExpansion();
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     printf("Duration: %d ms", duration.count());
