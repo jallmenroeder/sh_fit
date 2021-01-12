@@ -20,7 +20,8 @@ LTSF::LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat
         m_M_inv(glm::inverse(M)),
         m_det_M_inv(glm::determinant(m_M_inv)),
         m_view_dir(view_dir),
-        m_roughness(roughness) {}
+        m_roughness(roughness),
+        m_error_resolution(2 * NUM_SAMPLES){}
 
 
 void LTSF::update(const glm::mat3 &M) {
@@ -121,7 +122,7 @@ double LTSF::findSphericalExpansion() {
             {
                 glm::vec3 V = m_target_function->sample(uv);
                 float pdf_target = m_target_function->pdf(V);
-                float eval_brdf = m_target_function->eval(V);
+                float eval_target = m_target_function->eval(V);
                 float pdf_ltsf = pdf(V);
                 float weight = pdf_target / (pdf_target + pdf_ltsf);
 
@@ -130,7 +131,7 @@ double LTSF::findSphericalExpansion() {
                     gsl_matrix_set(gsl_mat, row_idx, column_idx, eval_ltsf * weight);
                 }
                 // we seek a fit for the cosine weighted BRDF, therefore V.z
-                gsl_vector_set(gsl_target_vector, row_idx, eval_brdf * fmax(0.f, V.z) * weight);
+                gsl_vector_set(gsl_target_vector, row_idx, eval_target * fmax(0.f, V.z) * weight);
             }
             row_idx++;
         }
@@ -158,21 +159,42 @@ double LTSF::findSphericalExpansion() {
 }
 
 
-// calculates mean squared error over hemisphere
+// calculates mean squared error using multiple importance sampling
 double LTSF::calculateError() const {
     double error = 0.;
     for (int i = 0; i < m_error_resolution; i++) {
-        for (int j = 0; j < 4 * m_error_resolution; j++) {
-            float theta = ((float)i + .5f) / (float)m_error_resolution / 2.f * M_PIf32;
-            float phi = ((float)j + .5f) / (float)m_error_resolution / 4.f / 2.f * M_PIf32;
+        for (int j = 0; j < m_error_resolution; j++) {
+            const float u = ((float)j + 0.5f) / (float)m_error_resolution;
+            const float v = ((float)i + 0.5f) / (float)m_error_resolution;
+            glm::vec2 uv(u, v);
 
-            auto V = sphericalToCartesian({theta, phi});
-            double current_error = eval(V) - m_target_function->eval(V);
-            current_error *= current_error;
-            error += current_error * sin(theta);
+            // sample LTSF
+            {
+                glm::vec3 V = sample(uv);
+                float pdf_target = m_target_function->pdf(V);
+                float eval_target = m_target_function->eval(V);
+                float pdf_ltsf = pdf(V);
+                float weight = pdf_ltsf / (pdf_target + pdf_ltsf);
+                double e = abs(eval_target - eval(V));
+                e *= e * e;
+                error += e * weight;
+            }
+
+            // sample BRDF
+            {
+                glm::vec3 V = m_target_function->sample(uv);
+                float pdf_target = m_target_function->pdf(V);
+                float eval_target = m_target_function->eval(V);
+                float pdf_ltsf = pdf(V);
+                float weight = pdf_target / (pdf_target + pdf_ltsf);
+                double e = abs(eval_target - eval(V));
+                e *= e * e;
+                error += e * weight;
+            }
         }
     }
-    return sqrt(error / (4. * (double)m_error_resolution * (double)m_error_resolution));
+    error /= m_error_resolution * m_error_resolution;
+    return error;
 }
 
 

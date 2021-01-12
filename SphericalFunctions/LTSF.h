@@ -52,6 +52,6 @@ private:
     float m_det_M_inv;
     glm::vec3 m_view_dir;
     float m_roughness;
-    int m_error_resolution = 64;
+    int m_error_resolution;
 
 };
