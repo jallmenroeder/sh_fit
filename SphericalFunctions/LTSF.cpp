@@ -224,10 +224,10 @@ void LTSF::findFit() {
     // Starting point
     // TODO: use LTC parameter as starting point
     x = gsl_vector_alloc(4);
-    gsl_vector_set(x, 0, 0.688);
-    gsl_vector_set(x, 1, 0.375);
-    gsl_vector_set(x, 2, 0.561);
-    gsl_vector_set(x, 3, -0.965);
+    gsl_vector_set(x, 0, m_M[0][0]);
+    gsl_vector_set(x, 1, m_M[0][2]);
+    gsl_vector_set(x, 2, m_M[1][1]);
+    gsl_vector_set(x, 3, m_M[2][0]);
 
     // Set initial step sizes to 1
     step_size = gsl_vector_alloc(4);
