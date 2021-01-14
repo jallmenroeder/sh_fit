@@ -14,6 +14,7 @@
 class SphericalHarmonics : public SphericalFunction {
 public:
     explicit SphericalHarmonics(int order);
+    std::unique_ptr<SphericalFunction> copy() const override;
     float eval(const glm::vec3& V) const override;
     float eval_basis(const glm::vec3& V, int idx) const override;
 

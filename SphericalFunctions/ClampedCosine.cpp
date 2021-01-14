@@ -14,6 +14,11 @@ void ClampedCosine::setCoefficients(std::shared_ptr<std::vector<float>> coeffs) 
 }
 
 
+std::unique_ptr<SphericalFunction> ClampedCosine::copy() const {
+    return std::make_unique<ClampedCosine>(1.f);
+}
+
+
 std::shared_ptr<std::vector<float>> ClampedCosine::getCoefficients() {
     std::vector<float> coeffs = {m_amplitude};
     return std::make_shared<std::vector<float>>(coeffs);
@@ -21,7 +26,7 @@ std::shared_ptr<std::vector<float>> ClampedCosine::getCoefficients() {
 
 
 float ClampedCosine::eval(const glm::vec3& V) const {
-    return m_amplitude / M_PIf32 * fmaxf(V.z, 0.f);
+    return m_amplitude * eval_basis(V, 0);
 }
 
 
@@ -30,6 +35,6 @@ float ClampedCosine::eval_basis(const glm::vec3& V, int idx) const {
         printf("error, clamped cosine can only be evaluated for index 0");
         return 0.f;
     }
-    return eval(V);
+    return fmaxf(V.z, 0.f) / M_PIf32;
 }
 

@@ -12,6 +12,11 @@ SphericalHarmonics::SphericalHarmonics(int order)
           m_coeffs(new std::vector<float>(m_NUM_COEFFS, 0.f)) {}
 
 
+std::unique_ptr<SphericalFunction> SphericalHarmonics::copy() const {
+    return std::make_unique<SphericalHarmonics>(m_ORDER);
+}
+
+
 float SphericalHarmonics::eval(const glm::vec3& V) const {
     float sum = 0.f;
     for (int coeff_idx = 0; coeff_idx < m_NUM_COEFFS; coeff_idx++) {

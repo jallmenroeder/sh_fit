@@ -12,6 +12,8 @@ class ClampedCosine : public SphericalFunction {
 public:
     explicit ClampedCosine(float amplitude) : m_amplitude(amplitude) {}
 
+    std::unique_ptr<SphericalFunction> copy() const override;
+
     void setCoefficients(std::shared_ptr<std::vector<float>> coeffs) override;
     std::shared_ptr<std::vector<float>> getCoefficients() override;
 
