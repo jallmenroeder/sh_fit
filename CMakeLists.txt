@@ -1,13 +1,15 @@
 cmake_minimum_required(VERSION 3.17)
 project(sh_fit_cpp)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 FIND_PACKAGE( Boost REQUIRED )
 INCLUDE_DIRECTORIES( "/usr/include/boost" )
 FIND_PACKAGE(GSL REQUIRED)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 
 add_executable(sh_fit_cpp
         main.cpp
@@ -19,6 +21,10 @@ add_executable(sh_fit_cpp
         SphericalFunctions/SphericalFunction.h
         SphericalFunctions/ClampedCosine.h
         SphericalFunctions/ClampedCosine.cpp
-        SphericalFunctions/BRDF.h SphericalFunctions/LTSF.cpp SphericalFunctions/LTSF.h)
+        SphericalFunctions/BRDF.h
+        SphericalFunctions/LTSF.cpp
+        SphericalFunctions/LTSF.h
+        ThreadPool.cpp
+        ThreadPool.h)
 
-TARGET_LINK_LIBRARIES( sh_fit_cpp LINK_PUBLIC ${Boost_LIBRARIES} GSL::gsl)
+TARGET_LINK_LIBRARIES( sh_fit_cpp LINK_PUBLIC ${Boost_LIBRARIES} GSL::gsl Threads::Threads)

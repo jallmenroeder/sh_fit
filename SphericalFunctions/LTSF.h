@@ -10,14 +10,24 @@
 #include "BRDF.h"
 #include "SphericalFunction.h"
 
+struct Idx {
+    int view;
+    int roughness;
+};
+
 
 class LTSF : public BRDF {
 public:
-    LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat3& M, const glm::vec3& view_dir,
-         float roughness);
+    LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat3& M, Idx idx, int LUT_dimension);
 
     void update(const glm::mat3& M);
     void setErrorResolution(int resolution);
+
+    Idx getIdx() { return m_idx; };
+    std::shared_ptr<glm::mat3> getLinearTransformation() const { return m_M; };
+    std::shared_ptr<glm::mat3> getInvLinearTransformation() const { return m_M_inv; };
+    std::shared_ptr<std::vector<float>> getCoefficients() const { return m_spherical_function->getCoefficients(); }
+    std::unique_ptr<SphericalFunction> getSphericalFunctionCopy() const;
 
     float eval(const glm::vec3& V) const override;
     float pdf(const glm::vec3& V) const override;
@@ -47,11 +57,11 @@ private:
 
     std::unique_ptr<SphericalFunction> m_spherical_function;
     std::unique_ptr<BRDF> m_target_function;
-    glm::mat3 m_M;
-    glm::mat3 m_M_inv;
+    std::shared_ptr<glm::mat3> m_M;
+    std::shared_ptr<glm::mat3> m_M_inv;
     float m_det_M_inv;
+    Idx m_idx;
     glm::vec3 m_view_dir;
     float m_roughness;
     int m_error_resolution;
-
 };
