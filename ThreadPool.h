@@ -24,7 +24,7 @@ class LTSF;
  */
 class ThreadPool {
 public:
-    ThreadPool(int LUT_dimension);
+    explicit ThreadPool(int LUT_dimension);
     void execute(const SphericalFunction& spherical_function);
 
 private:
@@ -34,8 +34,9 @@ private:
     std::queue<std::unique_ptr<LTSF>> m_queue;
     std::mutex m_queue_mutex;
 
-    vector_2d<glm::mat3> m_matrices;
-    vector_2d<std::vector<float>> m_coefficients;
+    std::unique_ptr<float[]> m_matrices;
+    std::unique_ptr<float[]> m_inv_matrices;
+    std::unique_ptr<float[]> m_coefficients;
     std::mutex m_data_mutex;
 
     const int m_LUT_DIMENSION;

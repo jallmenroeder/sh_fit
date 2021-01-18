@@ -6,24 +6,25 @@
 
 #include "SphericalFunctions/LTSF.h"
 
+#include "Numpy.h"
+
 #include <thread>
 
 
 ThreadPool::ThreadPool(int LUT_dimension)
 : m_LUT_DIMENSION(LUT_dimension),
   m_NUM_THREADS(std::thread::hardware_concurrency()) {
-    // initialize fitting data
-    m_matrices.resize(LUT_dimension);
-    m_coefficients.resize(LUT_dimension);
-    for (int i = 0; i < LUT_dimension; i++) {
-        m_matrices[i].resize(LUT_dimension);
-        m_coefficients[i].resize(LUT_dimension);
-    }
+//  m_NUM_THREADS(1) {
     printf("number of threads: %d\n", m_NUM_THREADS);
 }
 
 
 void ThreadPool::execute(const SphericalFunction& spherical_function) {
+    // initialize fitting data
+    m_matrices = std::make_unique<float[]>(m_LUT_DIMENSION * m_LUT_DIMENSION * 3 * 3);
+    m_inv_matrices = std::make_unique<float[]>(m_LUT_DIMENSION * m_LUT_DIMENSION * 4);
+    m_coefficients = std::make_unique<float[]>(m_LUT_DIMENSION * m_LUT_DIMENSION * spherical_function.numCoefficients());
+
     // TODO: add LTC parameters as initial guess
     for (int i = 0; i < m_LUT_DIMENSION; i++) {
         Idx idx = {i, m_LUT_DIMENSION / 2 - 1};
@@ -38,7 +39,12 @@ void ThreadPool::execute(const SphericalFunction& spherical_function) {
     for (auto& thread: pool) {
         thread.join();
     }
-    printf("Finished execution");
+
+    aoba::SaveArrayAsNumpy("cos_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 3, 3, m_matrices.get());
+    aoba::SaveArrayAsNumpy("inv_cos_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 4, m_inv_matrices.get());
+    aoba::SaveArrayAsNumpy("cos_coeff.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, spherical_function.numCoefficients(), m_coefficients.get());
+
+    printf("Finished execution\n");
 }
 
 
@@ -59,8 +65,42 @@ void ThreadPool::infiniteLoopFunction() {
         auto idx = ltsf->getIdx();
         {
             std::unique_lock<std::mutex> lock(m_data_mutex);
-            m_matrices[idx.view][idx.roughness] = ltsf->getInvLinearTransformation();
-            m_coefficients[idx.view][idx.roughness] = ltsf->getCoefficients();
+
+            auto mat = ltsf->getLinearTransformation();
+            for (int column = 0; column < 3; column++) {
+                for (int row = 0; row < 3; row++) {
+                    m_matrices[
+                            m_LUT_DIMENSION * 3 * 3 * idx.view
+                            + 3 * 3 * idx.roughness
+                            + 3 * column
+                            + row] = (*mat)[column][row];
+//                              + row] = (*mat)[row][column];
+                }
+            }
+
+            auto inv_mat = ltsf->getInvLinearTransformation();
+            // rescale the matrix so the first entry is always 1.
+            (*inv_mat) = (*inv_mat) / (*inv_mat)[0][0];
+            int column = 2; int row = 0;
+            for (int i = 0; i < 4; i++) {
+                m_inv_matrices[
+                        m_LUT_DIMENSION * 4 * idx.view
+                        + 4 * idx.roughness
+                        + i] = (*inv_mat)[column][row];
+                column += 2;
+                if (column > 2) {
+                    column = column % 3;
+                    row++;
+                }
+            }
+
+            auto coefficients = ltsf->getCoefficients();
+            for (int i = 0; i < coefficients->size(); i++) {
+                m_coefficients[
+                        m_LUT_DIMENSION * coefficients->size() * idx.view
+                        + coefficients->size() * idx.roughness
+                        + i] = (*coefficients)[i];
+            }
         }
 
         Idx current_idx = ltsf->getIdx();
