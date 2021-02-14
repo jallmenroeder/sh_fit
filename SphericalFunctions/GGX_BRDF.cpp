@@ -26,7 +26,7 @@ float GGX_BRDF::eval_ggx(const glm::vec3& V, const glm::vec3& L, float roughness
     float G_V = L.z * sqrtf((-V.z * roughness2 + V.z) * V.z + roughness2);
     float G_L = V.z * sqrtf((-L.z * roughness2 + L.z) * L.z + roughness2);
     float vis = 0.5f / (G_V + G_L);
-    return D * vis * F / M_PIf32;
+    return D * vis * F / M_PIf32 * V.z;
 }
 
 

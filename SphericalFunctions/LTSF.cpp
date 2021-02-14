@@ -119,7 +119,7 @@ double LTSF::findSphericalExpansion() {
                     gsl_matrix_set(gsl_mat, row_idx, column_idx, eval_ltsf * weight);
                 }
                 // we seek a fit for the cosine weighted BRDF, therefore V.z
-                gsl_vector_set(gsl_target_vector, row_idx, eval_target * fmax(0.f, V.z) * weight);
+                gsl_vector_set(gsl_target_vector, row_idx, eval_target * weight);
             }
 
             row_idx++;
@@ -137,7 +137,7 @@ double LTSF::findSphericalExpansion() {
                     gsl_matrix_set(gsl_mat, row_idx, column_idx, eval_ltsf * weight);
                 }
                 // we seek a fit for the cosine weighted BRDF, therefore V.z
-                gsl_vector_set(gsl_target_vector, row_idx, eval_target * fmax(0.f, V.z) * weight);
+                gsl_vector_set(gsl_target_vector, row_idx, eval_target * weight);
             }
             row_idx++;
         }
