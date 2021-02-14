@@ -4,8 +4,6 @@
 
 #include "LTSF.h"
 
-#include <gsl/gsl_multifit.h>
-#include <gsl/gsl_multimin.h>
 #include <iostream>
 
 #include "../Util.h"
@@ -23,6 +21,37 @@ LTSF::LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat
     m_roughness = ((float)idx.roughness + 5.f ) / (float)LUT_dimension;
     m_roughness *= m_roughness;
     m_target_function = std::make_unique<GGX_BRDF>(m_view_dir, m_roughness);
+
+    // init multifit
+	int rows = NUM_SAMPLES * NUM_SAMPLES * 2;
+	int columns = m_spherical_function->numCoefficients();
+
+	m_gsl_mat = gsl_matrix_alloc(rows, columns);
+	m_gsl_cov = gsl_matrix_alloc(columns, columns);
+	m_gsl_target_vector = gsl_vector_alloc(rows);
+	m_gsl_coefficients = gsl_vector_alloc(columns);
+	m_workspace = gsl_multifit_linear_alloc(rows, columns);
+
+	// init multimin
+	m_multimin_type = gsl_multimin_fminimizer_nmsimplex2;
+	m_multimin_x = gsl_vector_alloc(4);
+	m_multimin_step_size = gsl_vector_alloc(4);
+	m_multimin_workspace = gsl_multimin_fminimizer_alloc(m_multimin_type, 4);
+}
+
+
+LTSF::~LTSF() {
+	// free multifit
+	gsl_matrix_free(m_gsl_mat);
+	gsl_matrix_free(m_gsl_cov);
+	gsl_vector_free(m_gsl_target_vector);
+	gsl_vector_free(m_gsl_coefficients);
+	gsl_multifit_linear_free(m_workspace);
+
+	// free multimin
+	gsl_vector_free(m_multimin_x);
+	gsl_vector_free(m_multimin_step_size);
+	gsl_multimin_fminimizer_free(m_multimin_workspace);
 }
 
 
@@ -92,12 +121,7 @@ glm::vec3 LTSF::sample(const glm::vec2& uv) const {
 
 
 double LTSF::findSphericalExpansion() {
-    int rows = NUM_SAMPLES * NUM_SAMPLES * 2;
     int columns = m_spherical_function->numCoefficients();
-    auto gsl_mat = gsl_matrix_alloc(rows, columns);
-    auto gsl_cov = gsl_matrix_alloc(columns, columns);
-    auto gsl_target_vector = gsl_vector_alloc(rows);
-    auto gsl_coefficients = gsl_vector_alloc(columns);
     int row_idx = 0;
 
     for (int i = 0; i < NUM_SAMPLES; i++) {
@@ -116,10 +140,10 @@ double LTSF::findSphericalExpansion() {
 
                 for (int column_idx = 0; column_idx < columns; column_idx++) {
                     float eval_ltsf = evalLtsfBasis(V, column_idx);
-                    gsl_matrix_set(gsl_mat, row_idx, column_idx, eval_ltsf * weight);
+                    gsl_matrix_set(m_gsl_mat, row_idx, column_idx, eval_ltsf * weight);
                 }
                 // we seek a fit for the cosine weighted BRDF, therefore V.z
-                gsl_vector_set(gsl_target_vector, row_idx, eval_target * weight);
+                gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
             }
 
             row_idx++;
@@ -134,32 +158,25 @@ double LTSF::findSphericalExpansion() {
 
                 for (int column_idx = 0; column_idx < columns; column_idx++) {
                     float eval_ltsf = evalLtsfBasis(V, column_idx);
-                    gsl_matrix_set(gsl_mat, row_idx, column_idx, eval_ltsf * weight);
+                    gsl_matrix_set(m_gsl_mat, row_idx, column_idx, eval_ltsf * weight);
                 }
                 // we seek a fit for the cosine weighted BRDF, therefore V.z
-                gsl_vector_set(gsl_target_vector, row_idx, eval_target * weight);
+                gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
             }
             row_idx++;
         }
     }
 
     // initialise gsl linear least squares solver and solve
-    auto workspace = gsl_multifit_linear_alloc(rows, columns);
     double chi_squared;
-    gsl_multifit_linear(gsl_mat, gsl_target_vector, gsl_coefficients, gsl_cov, &chi_squared, workspace);
-    gsl_multifit_linear_free(workspace);
+    gsl_multifit_linear(m_gsl_mat, m_gsl_target_vector, m_gsl_coefficients, m_gsl_cov, &chi_squared, m_workspace);
 
     // set fitted coefficients to spherical function
     auto coefficients = std::make_unique<std::vector<float>>(columns);
     for (int column = 0; column < columns; column++) {
-        (*coefficients)[column] = gsl_vector_get(gsl_coefficients, column);
+        (*coefficients)[column] = gsl_vector_get(m_gsl_coefficients, column);
     }
     m_spherical_function->setCoefficients(std::move(coefficients));
-
-    // free resource from gsl variables
-    gsl_matrix_free(gsl_mat);
-    gsl_vector_free(gsl_target_vector);
-    gsl_vector_free(gsl_coefficients);
 
     return chi_squared;
 }
@@ -220,10 +237,6 @@ double LTSF::minimizeFunc(const gsl_vector* x, void* params) {
 
 
 void LTSF::findFit() {
-    const gsl_multimin_fminimizer_type *T =
-            gsl_multimin_fminimizer_nmsimplex2;
-    gsl_multimin_fminimizer *minimizer_workspace = nullptr;
-    gsl_vector *step_size, *x;
     gsl_multimin_function minex_func;
 
     size_t iter = 0;
@@ -231,33 +244,30 @@ void LTSF::findFit() {
     double size;
 
     // Starting point
-    x = gsl_vector_alloc(4);
-    gsl_vector_set(x, 0, (*m_M)[0][0]);
-    gsl_vector_set(x, 1, (*m_M)[0][2]);
-    gsl_vector_set(x, 2, (*m_M)[1][1]);
-    gsl_vector_set(x, 3, (*m_M)[2][0]);
+    gsl_vector_set(m_multimin_x, 0, (*m_M)[0][0]);
+    gsl_vector_set(m_multimin_x, 1, (*m_M)[0][2]);
+    gsl_vector_set(m_multimin_x, 2, (*m_M)[1][1]);
+    gsl_vector_set(m_multimin_x, 3, (*m_M)[2][0]);
 
     // Set initial step sizes to 1
-    step_size = gsl_vector_alloc(4);
-    gsl_vector_set_all(step_size, 0.05f);
+    gsl_vector_set_all(m_multimin_step_size, 0.05f);
 
     // Initialize method and iterate
     minex_func.n = 4;
     minex_func.f = minimizeFunc;
     minex_func.params = static_cast<void*>(this);
 
-    minimizer_workspace = gsl_multimin_fminimizer_alloc(T, 4);
-    gsl_multimin_fminimizer_set(minimizer_workspace, &minex_func, x, step_size);
+    gsl_multimin_fminimizer_set(m_multimin_workspace, &minex_func, m_multimin_x, m_multimin_step_size);
 
     do
     {
         iter++;
-        status = gsl_multimin_fminimizer_iterate(minimizer_workspace);
+        status = gsl_multimin_fminimizer_iterate(m_multimin_workspace);
 
         if (status)
             break;
 
-        size = gsl_multimin_fminimizer_size(minimizer_workspace);
+        size = gsl_multimin_fminimizer_size(m_multimin_workspace);
         status = gsl_multimin_test_size(size, 1e-2);
 
         if (status == GSL_SUCCESS)
@@ -267,18 +277,15 @@ void LTSF::findFit() {
 
 //        printf ("%5d %10.3e %10.3e %10.3e %10.3e f() = %7.3f size = %.3f\n",
 //                iter,
-//                gsl_vector_get(minimizer_workspace->x, 0),
-//                gsl_vector_get(minimizer_workspace->x, 1),
-//                gsl_vector_get(minimizer_workspace->x, 2),
-//                gsl_vector_get(minimizer_workspace->x, 3),
-//                minimizer_workspace->fval, size);
+//                gsl_vector_get(m_multimin_workspace->m_multimin_x, 0),
+//                gsl_vector_get(m_multimin_workspace->m_multimin_x, 1),
+//                gsl_vector_get(m_multimin_workspace->m_multimin_x, 2),
+//                gsl_vector_get(m_multimin_workspace->m_multimin_x, 3),
+//                m_multimin_workspace->fval, size);
     }
     while (status == GSL_CONTINUE && iter < 100);
 
     printf("Found fit for idx: v_%d, r_%d\n", m_idx.view, m_idx.roughness);
-    gsl_vector_free(x);
-    gsl_vector_free(step_size);
-    gsl_multimin_fminimizer_free(minimizer_workspace);
 }
 
 

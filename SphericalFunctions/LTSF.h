@@ -6,6 +6,8 @@
 
 #include <memory>
 #include <gsl/gsl_vector.h>
+#include <gsl/gsl_multifit.h>
+#include <gsl/gsl_multimin.h>
 
 #include "BRDF.h"
 #include "SphericalFunction.h"
@@ -19,6 +21,7 @@ struct Idx {
 class LTSF : public BRDF {
 public:
     LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat3& M, Idx idx, int LUT_dimension);
+    ~LTSF();
 
     void update(const glm::mat3& M);
     void setErrorResolution(int resolution);
@@ -38,7 +41,7 @@ public:
     double calculateError() const;
 
     /**
-     * This function maps a linear transformation (defined by 4 parameters in vector x) to the difference between LTSF
+     * This function maps a linear transformation (defined by 4 parameters in vector m_multimin_x) to the difference between LTSF
      * and target function. It follows the GSL specifications for multidimensional functions for minimization
      * (https://www.gnu.org/software/gsl/doc/html/multimin.html#providing-a-function-to-minimize).
      * The minimum of this function is thus the closest approximation of the target function with LTSF.
@@ -64,4 +67,16 @@ private:
     glm::vec3 m_view_dir;
     float m_roughness;
     int m_error_resolution;
+
+    // gsl multifit
+	gsl_matrix* m_gsl_mat;
+	gsl_matrix* m_gsl_cov;
+	gsl_vector* m_gsl_target_vector;
+	gsl_vector* m_gsl_coefficients;
+	gsl_multifit_linear_workspace* m_workspace;
+
+	// gsl multimin
+	const gsl_multimin_fminimizer_type *m_multimin_type;
+	gsl_multimin_fminimizer *m_multimin_workspace;
+	gsl_vector *m_multimin_step_size, *m_multimin_x;
 };
