@@ -5,7 +5,7 @@
 #include "GGX_BRDF.h"
 
 
-float GGX_BRDF::eval_ggx(const glm::vec3& V, const glm::vec3& L, float roughness) {
+float GGX_BRDF::eval_ggx(const glm::vec3& V, const glm::vec3& L) const {
 
     if (V.z <= 0.f || L.z <= 0.f) {
         return 0.f;
@@ -15,16 +15,15 @@ float GGX_BRDF::eval_ggx(const glm::vec3& V, const glm::vec3& L, float roughness
     glm::vec3 H = glm::normalize(V + L);
 
     // Normal Distribution D
-    float roughness2 = roughness * roughness;
-    float denom = (H.z * roughness2 - H.z) * H.z + 1.f;
-    float D = roughness2 / denom / denom;
+    float denom = (H.z * m_roughness2 - H.z) * H.z + 1.f;
+    float D = m_roughness2 / denom / denom;
 
     // Fresnel
     float F = F0 + (1.f - F0) * powf(1.f - cdot(L, H), 5);
 
     // Visibility
-    float G_V = L.z * sqrtf((-V.z * roughness2 + V.z) * V.z + roughness2);
-    float G_L = V.z * sqrtf((-L.z * roughness2 + L.z) * L.z + roughness2);
+    float G_V = L.z * sqrtf((-V.z * m_roughness2 + V.z) * V.z + m_roughness2);
+    float G_L = V.z * sqrtf((-L.z * m_roughness2 + L.z) * L.z + m_roughness2);
     float vis = 0.5f / (G_V + G_L);
     return D * vis * F / M_PIf32 * V.z;
 }
@@ -36,7 +35,7 @@ float GGX_BRDF::pdf(const glm::vec3& V) const {
     const auto H = glm::normalize(V + m_view_dir);
     float theta = acosf(H.z);
     float roughness_2 = m_roughness * m_roughness;
-    float denom = (roughness_2 - 1.f) * H.z * H.z + 1;
+    float denom = (roughness_2 - 1.f) * H.z * H.z + 1.f;
     denom *= denom * M_PIf32;
     return roughness_2 * H.z * sinf(theta) / denom;
 }
@@ -51,5 +50,5 @@ glm::vec3 GGX_BRDF::sample(const glm::vec2& uv) const {
 
 
 float GGX_BRDF::eval(const glm::vec3& v) const {
-    return eval_ggx(m_view_dir, v, m_roughness);
+    return eval_ggx(m_view_dir, v);
 }
