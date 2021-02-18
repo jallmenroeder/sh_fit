@@ -25,10 +25,18 @@ void ThreadPool::execute(const SphericalFunction& spherical_function) {
     m_inv_matrices = std::make_unique<float[]>(m_LUT_DIMENSION * m_LUT_DIMENSION * 4);
     m_coefficients = std::make_unique<float[]>(m_LUT_DIMENSION * m_LUT_DIMENSION * spherical_function.numCoefficients());
 
-    // TODO: add LTC parameters as initial guess
+    auto ltc_matrices = std::vector<double>();
+    aoba::LoadArrayFromNumpy("../cos_mat.npy", ltc_matrices);
+
+    m_ltc_params.resize(m_LUT_DIMENSION);
     for (int i = 0; i < m_LUT_DIMENSION; i++) {
         Idx idx = {i, m_LUT_DIMENSION / 2 - 1};
-        addLTSF(std::make_unique<LTSF>(spherical_function.copy(), glm::mat3(1.f), idx, m_LUT_DIMENSION));
+        for (int j = 0; j < 3; j++) {
+        	for (int k = 0; k < 3; k++) {
+        		m_ltc_params[i][j][k] = ltc_matrices[idx.view * m_LUT_DIMENSION * 3 * 3 + idx.roughness * 3 * 3 + j * 3 + k];
+        	}
+        }
+        m_queue.emplace(new LTSF(spherical_function.copy(), m_ltc_params[i], idx, m_LUT_DIMENSION));
     }
 
     std::vector<std::thread> pool;
@@ -40,9 +48,13 @@ void ThreadPool::execute(const SphericalFunction& spherical_function) {
         thread.join();
     }
 
-    aoba::SaveArrayAsNumpy("cos_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 3, 3, m_matrices.get());
-    aoba::SaveArrayAsNumpy("inv_cos_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 4, m_inv_matrices.get());
-    aoba::SaveArrayAsNumpy("cos_coeff.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, spherical_function.numCoefficients(), m_coefficients.get());
+    // TODO: change name depending on function type
+//    aoba::SaveArrayAsNumpy("sh_n2_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 3, 3, m_matrices.get());
+//    aoba::SaveArrayAsNumpy("inv_sh_n2_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 4, m_inv_matrices.get());
+//    aoba::SaveArrayAsNumpy("sh_n2_coeff.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, spherical_function.numCoefficients(), m_coefficients.get());
+	aoba::SaveArrayAsNumpy("cos_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 3, 3, m_matrices.get());
+	aoba::SaveArrayAsNumpy("inv_cos_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 4, m_inv_matrices.get());
+	aoba::SaveArrayAsNumpy("cos_coeff.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, spherical_function.numCoefficients(), m_coefficients.get());
 
     printf("Finished execution\n");
 }
@@ -104,18 +116,22 @@ void ThreadPool::infiniteLoopFunction() {
         }
 
         Idx current_idx = ltsf->getIdx();
+    	glm::mat3 guess;
         if ((current_idx.roughness < m_LUT_DIMENSION / 2) && (current_idx.roughness > 0)) {
             current_idx.roughness--;
+            guess = *ltsf->getLinearTransformation();
         } else if ((current_idx.roughness >= m_LUT_DIMENSION / 2) && (current_idx.roughness < m_LUT_DIMENSION - 1)) {
             current_idx.roughness++;
+			guess = *ltsf->getLinearTransformation();
         } else if (current_idx.roughness == 0) {
             current_idx.roughness = m_LUT_DIMENSION / 2;
+			guess = m_ltc_params[current_idx.view];
         } else {
             printf("finished view dir with index: %d\n", current_idx.view);
             continue;
         }
         auto next = std::make_unique<LTSF>(ltsf->getSphericalFunctionCopy(),
-                                           *ltsf->getLinearTransformation(),
+                                           guess,
                                            current_idx,
                                            m_LUT_DIMENSION);
         {
@@ -123,10 +139,4 @@ void ThreadPool::infiniteLoopFunction() {
             m_queue.push(std::move(next));
         }
     }
-}
-
-
-void ThreadPool::addLTSF(std::unique_ptr<LTSF> ltsf) {
-    std::unique_lock<std::mutex> lock(m_queue_mutex);
-    m_queue.push(std::move(ltsf));
 }
