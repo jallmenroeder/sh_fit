@@ -5,7 +5,6 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include <gsl/gsl_matrix.h>
 #include <vector>
 #include <memory>
 

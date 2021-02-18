@@ -15,7 +15,7 @@ void ClampedCosine::setCoefficients(std::shared_ptr<std::vector<float>> coeffs) 
 
 
 std::unique_ptr<SphericalFunction> ClampedCosine::copy() const {
-    return std::make_unique<ClampedCosine>(1.f);
+    return std::make_unique<ClampedCosine>(m_amplitude);
 }
 
 
