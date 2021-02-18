@@ -26,6 +26,8 @@ add_executable(sh_fit_cpp
         SphericalFunctions/LTSF.h
         ThreadPool.cpp
         ThreadPool.h
+        Test.cpp
+        Test.h
         Numpy.h)
 
 TARGET_LINK_LIBRARIES( sh_fit_cpp LINK_PUBLIC ${Boost_LIBRARIES} GSL::gsl Threads::Threads)
