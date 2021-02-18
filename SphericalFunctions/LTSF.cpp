@@ -18,7 +18,7 @@ LTSF::LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat
         m_idx(idx),
         m_error_resolution(2 * NUM_SAMPLES) {
     m_view_dir = sphericalToCartesian({((float)idx.view + .5f) / (float)LUT_dimension / 2.f * M_PIf32, 0.f});
-    m_roughness = ((float)idx.roughness + 5.f ) / (float)LUT_dimension;
+    m_roughness = ((float)idx.roughness + .5f ) / (float)LUT_dimension;
     m_roughness *= m_roughness;
     m_target_function = std::make_unique<GGX_BRDF>(m_view_dir, m_roughness);
 
@@ -106,7 +106,7 @@ glm::vec3 LTSF::sample(const glm::vec2& uv) const {
         disc_sample = glm::vec2(0.f, 0.f);
     } else {
         float theta, r;
-        if (abs(mapped_uv.x) > abs(mapped_uv.y)) {
+        if (fabs(mapped_uv.x) > fabs(mapped_uv.y)) {
             r = mapped_uv.x;
             theta = M_PIf32 * (mapped_uv.y / mapped_uv.x) / 4.f;
         } else {
@@ -142,7 +142,6 @@ double LTSF::findSphericalExpansion() {
                     float eval_ltsf = evalLtsfBasis(V, column_idx);
                     gsl_matrix_set(m_gsl_mat, row_idx, column_idx, eval_ltsf * weight);
                 }
-                // we seek a fit for the cosine weighted BRDF, therefore V.z
                 gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
             }
 
@@ -160,7 +159,6 @@ double LTSF::findSphericalExpansion() {
                     float eval_ltsf = evalLtsfBasis(V, column_idx);
                     gsl_matrix_set(m_gsl_mat, row_idx, column_idx, eval_ltsf * weight);
                 }
-                // we seek a fit for the cosine weighted BRDF, therefore V.z
                 gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
             }
             row_idx++;
@@ -182,56 +180,13 @@ double LTSF::findSphericalExpansion() {
 }
 
 
-// calculates mean squared error using multiple importance sampling
-double LTSF::calculateError() const {
-    double error = 0.;
-    for (int i = 0; i < m_error_resolution; i++) {
-        for (int j = 0; j < m_error_resolution; j++) {
-            const float u = ((float)j + 0.5f) / (float)m_error_resolution;
-            const float v = ((float)i + 0.5f) / (float)m_error_resolution;
-            glm::vec2 uv(u, v);
-
-            // sample LTSF
-            {
-                glm::vec3 V = sample(uv);
-                float pdf_target = m_target_function->pdf(V);
-                float eval_target = m_target_function->eval(V);
-                float pdf_ltsf = pdf(V);
-                float weight = pdf_ltsf / (pdf_target + pdf_ltsf);
-                double e = abs(eval_target - eval(V));
-                e *= e * e;
-                error += e * weight;
-            }
-
-            // sample BRDF
-            {
-                glm::vec3 V = m_target_function->sample(uv);
-                float pdf_target = m_target_function->pdf(V);
-                float eval_target = m_target_function->eval(V);
-                float pdf_ltsf = pdf(V);
-                float weight = pdf_target / (pdf_target + pdf_ltsf);
-                double e = abs(eval_target - eval(V));
-                e *= e * e;
-                error += e * weight;
-            }
-        }
-    }
-    error /= m_error_resolution * m_error_resolution;
-    return error;
-}
-
-
 double LTSF::minimizeFunc(const gsl_vector* x, void* params) {
     auto ltsf = static_cast<LTSF*>(params);
     glm::mat3 M(gsl_vector_get(x, 0), 0.f, gsl_vector_get(x, 1),
                 0.f, gsl_vector_get(x, 2), 0.f,
                 gsl_vector_get(x, 3), 0.f, 1.f);
     ltsf->update(M);
-    // TODO: decide if chi-squared is sufficient as cost function or if error needs to be computed
-//    ltsf->findSphericalExpansion();
     auto error = ltsf->findSphericalExpansion();
-//    auto error = ltsf->calculateError();
-    // check for NaN, x != x only true for NaNs
     return error != error ? std::numeric_limits<double>::max() : error;
 }
 
@@ -268,24 +223,15 @@ void LTSF::findFit() {
             break;
 
         size = gsl_multimin_fminimizer_size(m_multimin_workspace);
-        status = gsl_multimin_test_size(size, 1e-2);
-
-        if (status == GSL_SUCCESS)
-        {
-//            printf ("converged to minimum at\n");
-        }
-
-//        printf ("%5d %10.3e %10.3e %10.3e %10.3e f() = %7.3f size = %.3f\n",
-//                iter,
-//                gsl_vector_get(m_multimin_workspace->m_multimin_x, 0),
-//                gsl_vector_get(m_multimin_workspace->m_multimin_x, 1),
-//                gsl_vector_get(m_multimin_workspace->m_multimin_x, 2),
-//                gsl_vector_get(m_multimin_workspace->m_multimin_x, 3),
-//                m_multimin_workspace->fval, size);
+        status = gsl_multimin_test_size(size, 1e-7);
     }
-    while (status == GSL_CONTINUE && iter < 100);
+    while (status == GSL_CONTINUE && iter < 200);
 
-    printf("Found fit for idx: v_%d, r_%d\n", m_idx.view, m_idx.roughness);
+    if (status == GSL_SUCCESS) {
+		printf("Found fit for idx: v_%d, r_%d\n", m_idx.view, m_idx.roughness);
+    } else {
+    	printf("Error, multimin did not converge for idx: v_%d, r_%d\n", m_idx.view, m_idx.roughness);
+    }
 }
 
 
