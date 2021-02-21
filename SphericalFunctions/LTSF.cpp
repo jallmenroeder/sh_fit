@@ -17,8 +17,8 @@ LTSF::LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat
         m_det_M_inv(glm::determinant(*m_M_inv)),
         m_idx(idx),
         m_error_resolution(2 * NUM_SAMPLES) {
-    m_view_dir = sphericalToCartesian({((float)idx.view + .5f) / (float)LUT_dimension / 2.f * M_PIf32, 0.f});
-    m_roughness = ((float)idx.roughness + .5f ) / (float)LUT_dimension;
+    m_view_dir = sphericalToCartesian({((float)idx.view) / (float)(LUT_dimension - 1) / 2.f * M_PIf32, 0.f});
+    m_roughness = (float)idx.roughness / (float)(LUT_dimension - 1);
     m_roughness *= m_roughness;
     m_target_function = std::make_unique<GGX_BRDF>(m_view_dir, m_roughness);
 
