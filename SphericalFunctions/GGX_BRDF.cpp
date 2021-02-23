@@ -5,6 +5,19 @@
 #include "GGX_BRDF.h"
 
 
+GGX_BRDF::GGX_BRDF(const glm::vec3& view_dir, float roughness)
+	: m_V(view_dir),
+	  m_roughness(roughness),
+	  m_roughness2(roughness * roughness) {
+
+	// precomputation for sampling, never change for one BRDF configuration
+	// Sampling the GGX Distribution of visible normals, see http://jcgt.org/published/0007/04/01/ for more detail
+	m_Vh = normalize(glm::vec3(m_roughness * m_V.x, m_roughness * m_V.y, m_V.z));
+	float lensq = m_Vh.x * m_Vh.x + m_Vh.y * m_Vh.y;
+	m_T1 = lensq > 0 ? glm::vec3(-m_Vh.y, m_Vh.x, 0) * (1.f / sqrtf(lensq)) : glm::vec3(1, 0, 0);
+	m_T2 = cross(m_Vh, m_T1);
+}
+
 float GGX_BRDF::eval_ggx(const glm::vec3& V, const glm::vec3& L) const {
 
     if (V.z <= 0.f || L.z <= 0.f) {
@@ -29,26 +42,35 @@ float GGX_BRDF::eval_ggx(const glm::vec3& V, const glm::vec3& L) const {
     return D * vis * F / M_PIf32 * L.z;
 }
 
-// GGX PDF from Heitz et al's LTC fitting: https://eheitzresearch.wordpress.com/415-2/
-float GGX_BRDF::pdf(const glm::vec3 &V) const {
-	const glm::vec3 H = normalize(V + m_view_dir);
-	const float slopex = H.x / H.z;
-	const float slopey = H.y / H.z;
-	float D = 1.0f / (1.0f + (slopex * slopex + slopey * slopey) / m_roughness2);
-	D = D * D;
-	D = D / (3.14159f * m_roughness2 * H.z * H.z * H.z * H.z);
+// Output Ne: normal sampled with PDF D_Ve(Ne) = G1(Ve) * max(0, dot(Ve, Ne)) * D(Ne) / Ve.z
+float GGX_BRDF::pdf(const glm::vec3 &L) const {
+	// Halfvector
+	glm::vec3 H = glm::normalize(L + m_V);
 
-	return fabsf(D * H.z / 4.0f / dot(V,H));
+	// Normal Distribution D
+	float temp = (H.x * H.x / m_roughness2 + H.y * H.y / m_roughness2 + H.z * H.z);
+	float D = 1.f / (M_PIf32 * m_roughness2 * temp * temp);
+
+	float G1 = 1.f / (1.f + ((-1.f + sqrtf(1.f + (m_V.x * m_V.x * m_roughness2 + m_V.y * m_V.y * m_roughness2) / (m_V.z * m_V.z))) * .5f));
+	return (G1 * fmaxf(0, glm::dot(m_V, H)) * D) / (4.f * glm::dot(m_V, H) * m_V.z);
 }
 
+
+// Sampling the GGX Distribution of visible normals
+// http://jcgt.org/published/0007/04/01/
 glm::vec3 GGX_BRDF::sample(const glm::vec2& uv) const {
-    const float theta = acosf(sqrtf((1 - uv.x) / (uv.x * (m_roughness2 - 1.f) + 1.f)));
-    const float phi = 2.0f * M_PIf32 * uv.y;
-    const glm::vec3 N = sphericalToCartesian({theta, phi});
-    return glm::normalize(-m_view_dir + 2.0f * N * dot(N, m_view_dir));
+	float r = sqrtf(uv.x);
+	float phi = 2.f * M_PIf32 * uv.y;
+	float t1 = r * cosf(phi);
+	float t2 = r * sinf(phi);
+	float s = 0.5f * (1.f + m_Vh.z);
+	t2 = (1.f - s)*sqrtf(1.f - t1*t1) + s*t2;
+	glm::vec3 Nh = t1*m_T1 + t2*m_T2 + sqrtf(fmaxf(0.f, 1.f - t1*t1 - t2*t2))*m_Vh;
+	glm::vec3 Ne = normalize(glm::vec3(m_roughness * Nh.x, m_roughness * Nh.y, fmaxf(0.0, Nh.z)));
+	return glm::reflect(-m_V, Ne);
 }
 
 
-float GGX_BRDF::eval(const glm::vec3& v) const {
-    return eval_ggx(m_view_dir, v);
+float GGX_BRDF::eval(const glm::vec3& L) const {
+    return eval_ggx(m_V, L);
 }
