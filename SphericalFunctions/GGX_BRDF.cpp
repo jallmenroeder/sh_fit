@@ -16,6 +16,7 @@ GGX_BRDF::GGX_BRDF(const glm::vec3& view_dir, float roughness)
 	float lensq = m_Vh.x * m_Vh.x + m_Vh.y * m_Vh.y;
 	m_T1 = lensq > 0 ? glm::vec3(-m_Vh.y, m_Vh.x, 0) * (1.f / sqrtf(lensq)) : glm::vec3(1, 0, 0);
 	m_T2 = cross(m_Vh, m_T1);
+	m_G1_V = 1.f / (1.f + ((-1.f + sqrtf(1.f + (m_V.x * m_V.x * m_roughness2 + m_V.y * m_V.y * m_roughness2) / (m_V.z * m_V.z))) * .5f));
 }
 
 float GGX_BRDF::eval_ggx(const glm::vec3& V, const glm::vec3& L) const {
@@ -42,7 +43,7 @@ float GGX_BRDF::eval_ggx(const glm::vec3& V, const glm::vec3& L) const {
     return D * vis * F / M_PIf32 * L.z;
 }
 
-// Output Ne: normal sampled with PDF D_Ve(Ne) = G1(Ve) * max(0, dot(Ve, Ne)) * D(Ne) / Ve.z
+
 float GGX_BRDF::pdf(const glm::vec3 &L) const {
 	// Halfvector
 	glm::vec3 H = glm::normalize(L + m_V);
@@ -51,8 +52,7 @@ float GGX_BRDF::pdf(const glm::vec3 &L) const {
 	float temp = (H.x * H.x / m_roughness2 + H.y * H.y / m_roughness2 + H.z * H.z);
 	float D = 1.f / (M_PIf32 * m_roughness2 * temp * temp);
 
-	float G1 = 1.f / (1.f + ((-1.f + sqrtf(1.f + (m_V.x * m_V.x * m_roughness2 + m_V.y * m_V.y * m_roughness2) / (m_V.z * m_V.z))) * .5f));
-	return (G1 * fmaxf(0, glm::dot(m_V, H)) * D) / (4.f * glm::dot(m_V, H) * m_V.z);
+	return (m_G1_V * fmaxf(0, glm::dot(m_V, H)) * D) / (4.f * glm::dot(m_V, H) * m_V.z);
 }
 
 

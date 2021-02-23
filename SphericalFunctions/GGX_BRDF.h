@@ -33,4 +33,5 @@ private:
     glm::vec3 m_Vh;
 	glm::vec3 m_T1;
 	glm::vec3 m_T2;
+	float m_G1_V;
 };
