@@ -18,6 +18,7 @@ public:
     std::shared_ptr<std::vector<float>> getCoefficients() override;
 
     int numCoefficients() const override { return 1; }
+	std::string getName() const override {return "cos"; }
 
     float eval(const glm::vec3& V) const override;
 

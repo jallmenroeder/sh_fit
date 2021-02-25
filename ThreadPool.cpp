@@ -30,7 +30,7 @@ void ThreadPool::execute(const SphericalFunction& spherical_function) {
 
     m_ltc_params.resize(m_LUT_DIMENSION);
     for (int i = 0; i < m_LUT_DIMENSION; i++) {
-        Idx idx = {i, m_LUT_DIMENSION / 2 - 1};
+        Idx idx = {i, m_LUT_DIMENSION - 1};
         for (int j = 0; j < 3; j++) {
         	for (int k = 0; k < 3; k++) {
         		m_ltc_params[i][j][k] = ltc_matrices[idx.view * m_LUT_DIMENSION * 3 * 3 + idx.roughness * 3 * 3 + j * 3 + k];
@@ -48,13 +48,10 @@ void ThreadPool::execute(const SphericalFunction& spherical_function) {
         thread.join();
     }
 
-    // TODO: change name depending on function type
-//    aoba::SaveArrayAsNumpy("sh_n2_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 3, 3, m_matrices.get());
-//    aoba::SaveArrayAsNumpy("inv_sh_n2_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 4, m_inv_matrices.get());
-//    aoba::SaveArrayAsNumpy("sh_n2_coeff.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, spherical_function.numCoefficients(), m_coefficients.get());
-	aoba::SaveArrayAsNumpy("cos_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 3, 3, m_matrices.get());
-	aoba::SaveArrayAsNumpy("inv_cos_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 4, m_inv_matrices.get());
-	aoba::SaveArrayAsNumpy("cos_coeff.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, spherical_function.numCoefficients(), m_coefficients.get());
+    auto func_name = spherical_function.getName();
+    aoba::SaveArrayAsNumpy(func_name + "_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 3, 3, m_matrices.get());
+    aoba::SaveArrayAsNumpy("inv_" + func_name + "_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 4, m_inv_matrices.get());
+    aoba::SaveArrayAsNumpy(func_name + "_coeff.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, spherical_function.numCoefficients(), m_coefficients.get());
 
     printf("Finished execution\n");
 }
@@ -117,19 +114,13 @@ void ThreadPool::infiniteLoopFunction() {
 
         Idx current_idx = ltsf->getIdx();
     	glm::mat3 guess;
-        if ((current_idx.roughness < m_LUT_DIMENSION / 2) && (current_idx.roughness > 0)) {
-            current_idx.roughness--;
-            guess = *ltsf->getLinearTransformation();
-        } else if ((current_idx.roughness >= m_LUT_DIMENSION / 2) && (current_idx.roughness < m_LUT_DIMENSION - 1)) {
-            current_idx.roughness++;
+    	if (current_idx.roughness <= 0) {
+			printf("finished view dir with index: %d\n", current_idx.view);
+			continue;
+    	} else {
+			current_idx.roughness--;
 			guess = *ltsf->getLinearTransformation();
-        } else if (current_idx.roughness == 0) {
-            current_idx.roughness = m_LUT_DIMENSION / 2;
-			guess = m_ltc_params[current_idx.view];
-        } else {
-            printf("finished view dir with index: %d\n", current_idx.view);
-            continue;
-        }
+    	}
         auto next = std::make_unique<LTSF>(ltsf->getSphericalFunctionCopy(),
                                            guess,
                                            current_idx,

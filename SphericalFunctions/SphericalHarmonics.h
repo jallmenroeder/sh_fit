@@ -22,6 +22,7 @@ public:
     std::shared_ptr<std::vector<float>> getCoefficients() override;
 
     int numCoefficients() const override { return m_NUM_COEFFS; }
+    std::string getName() const override { return "sh_n" + std::to_string(m_ORDER); }
 
 private:
     const int m_ORDER;
