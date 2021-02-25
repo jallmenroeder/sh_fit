@@ -9,6 +9,8 @@
 #include "../Util.h"
 #include "GGX_BRDF.h"
 
+const float MIN_ROUGHNESS = 0.0001f;
+const float MAX_THETA = 1.57f;
 
 LTSF::LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat3& M, Idx idx, int LUT_dimension) :
         m_spherical_function(std::move(spherical_function)),
@@ -17,8 +19,10 @@ LTSF::LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat
         m_det_M_inv(glm::determinant(*m_M_inv)),
         m_idx(idx),
         m_error_resolution(2 * NUM_SAMPLES) {
-    m_view_dir = sphericalToCartesian({((float)idx.view) / (float)(LUT_dimension - 1) / 2.f * M_PIf32, 0.f});
-    m_roughness = (float)idx.roughness / (float)(LUT_dimension - 1);
+	// avoid singularities at theta = 90° and roughness = 0;
+	float theta = fminf(((float)idx.view) / (float)(LUT_dimension - 1) / 2.f * M_PIf32, MAX_THETA);
+    m_view_dir = sphericalToCartesian({theta, 0.f});
+    m_roughness = fmaxf((float)idx.roughness / (float)(LUT_dimension - 1), MIN_ROUGHNESS);
     m_roughness *= m_roughness;
     m_target_function = std::make_unique<GGX_BRDF>(m_view_dir, m_roughness);
 
@@ -204,7 +208,7 @@ void LTSF::findFit() {
     gsl_vector_set(m_multimin_x, 2, (*m_M)[1][1]);
     gsl_vector_set(m_multimin_x, 3, (*m_M)[2][0]);
 
-    // Set initial step sizes to 1
+    // Set initial step size
     gsl_vector_set_all(m_multimin_step_size, 0.05f);
 
     // Initialize method and iterate
