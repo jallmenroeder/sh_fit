@@ -6,7 +6,7 @@
 
 #include <glm/glm.hpp>
 
-constexpr int NUM_SAMPLES = 128;
+constexpr int NUM_SAMPLES = 64;
 
 struct Spherical {
     float theta, phi;
@@ -28,4 +28,13 @@ static Spherical cartesianToSpherical(const glm::vec3& cartesian) {
 
 static float cdot(const glm::vec3& a, const glm::vec3& b) {
     return fmaxf(0.f, glm::dot(a, b));
+}
+
+
+static int factorial(int i) {
+	float res = 1;
+	for (; i > 0; i--) {
+		res *= i;
+	}
+	return res;
 }

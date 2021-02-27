@@ -24,7 +24,6 @@ public:
     ~LTSF();
 
     void update(const glm::mat3& M);
-    void setErrorResolution(int resolution);
 
     Idx getIdx() { return m_idx; };
     std::shared_ptr<glm::mat3> getLinearTransformation() const { return m_M; };
@@ -34,11 +33,10 @@ public:
 
     float eval(const glm::vec3& V) const override;
     float pdf(const glm::vec3& V) const override;
-    float evalLtsfBasis(const glm::vec3& V, int idx) const;
+    void evalLtsfBasisArray(const glm::vec3& V, std::vector<float>& array, float& jacobian) const;
 
     glm::vec3 sample(const glm::vec2& uv) const override;
     double findSphericalExpansion();
-    double calculateError() const;
 
     /**
      * This function maps a linear transformation (defined by 4 parameters in vector m_multimin_x) to the difference between LTSF
@@ -66,7 +64,7 @@ private:
     Idx m_idx;
     glm::vec3 m_view_dir;
     float m_roughness;
-    int m_error_resolution;
+    std::vector<float> m_basis_eval;
 
     // gsl multifit
 	gsl_matrix* m_gsl_mat;

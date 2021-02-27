@@ -17,14 +17,14 @@ LTSF::LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat
         m_M(std::make_shared<glm::mat3>(M)),
         m_M_inv(std::make_shared<glm::mat3>(glm::inverse(M))),
         m_det_M_inv(glm::determinant(*m_M_inv)),
-        m_idx(idx),
-        m_error_resolution(2 * NUM_SAMPLES) {
+        m_idx(idx) {
 	// avoid singularities at theta = 90° and roughness = 0;
 	float theta = fminf(((float)idx.view) / (float)(LUT_dimension - 1) / 2.f * M_PIf32, MAX_THETA);
     m_view_dir = sphericalToCartesian({theta, 0.f});
     m_roughness = fmaxf((float)idx.roughness / (float)(LUT_dimension - 1), MIN_ROUGHNESS);
     m_roughness *= m_roughness;
     m_target_function = std::make_unique<GGX_BRDF>(m_view_dir, m_roughness);
+    m_basis_eval = std::vector<float>(m_spherical_function->numCoefficients());
 
     // init multifit
 	int rows = NUM_SAMPLES * NUM_SAMPLES * 2;
@@ -70,11 +70,6 @@ void LTSF::update(const glm::mat3 &M) {
 }
 
 
-void LTSF::setErrorResolution(int resolution) {
-    m_error_resolution = resolution;
-}
-
-
 std::unique_ptr<SphericalFunction> LTSF::getSphericalFunctionCopy() const {
     return m_spherical_function->copy();
 }
@@ -93,10 +88,9 @@ float LTSF::pdf(const glm::vec3& V) const {
 }
 
 
-float LTSF::evalLtsfBasis(const glm::vec3& V, int idx) const {
-    float jacobian;
-    glm::vec3 trans_V = linearly_transform_vec(V, jacobian);
-    return m_spherical_function->eval_basis(trans_V, idx) * jacobian;
+void LTSF::evalLtsfBasisArray(const glm::vec3& V, std::vector<float>& array, float& jacobian) const {
+	glm::vec3 trans_V = linearly_transform_vec(V, jacobian);
+	m_spherical_function->evalBasisArray(trans_V, array);
 }
 
 // cosine weighted sampling on the hemisphere
@@ -142,9 +136,10 @@ double LTSF::findSphericalExpansion() {
                 float pdf_ltsf = pdf(V);
                 float weight = pdf_ltsf / (pdf_target + pdf_ltsf);
 
+				float jacobian;
+				evalLtsfBasisArray(V, m_basis_eval, jacobian);
                 for (int column_idx = 0; column_idx < columns; column_idx++) {
-                    float eval_ltsf = evalLtsfBasis(V, column_idx);
-                    gsl_matrix_set(m_gsl_mat, row_idx, column_idx, eval_ltsf * weight);
+					gsl_matrix_set(m_gsl_mat, row_idx, column_idx, m_basis_eval[column_idx] * jacobian * weight);
                 }
                 gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
             }
@@ -159,9 +154,10 @@ double LTSF::findSphericalExpansion() {
                 float pdf_ltsf = pdf(V);
                 float weight = pdf_target / (pdf_target + pdf_ltsf);
 
+                float jacobian;
+                evalLtsfBasisArray(V, m_basis_eval, jacobian);
                 for (int column_idx = 0; column_idx < columns; column_idx++) {
-                    float eval_ltsf = evalLtsfBasis(V, column_idx);
-                    gsl_matrix_set(m_gsl_mat, row_idx, column_idx, eval_ltsf * weight);
+                    gsl_matrix_set(m_gsl_mat, row_idx, column_idx, m_basis_eval[column_idx] * jacobian * weight);
                 }
                 gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
             }
@@ -229,7 +225,7 @@ void LTSF::findFit() {
         size = gsl_multimin_fminimizer_size(m_multimin_workspace);
         status = gsl_multimin_test_size(size, 1e-7);
     }
-    while (status == GSL_CONTINUE && iter < 200);
+    while (status == GSL_CONTINUE && iter < 400);
 
     if (status == GSL_SUCCESS) {
 		printf("Found fit for idx: v_%d, r_%d\n", m_idx.view, m_idx.roughness);

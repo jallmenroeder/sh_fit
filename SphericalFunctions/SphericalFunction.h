@@ -16,6 +16,6 @@ public:
     virtual int numCoefficients() const = 0;
     virtual void setCoefficients(std::shared_ptr<std::vector<float>> coefficients) = 0;
     virtual std::shared_ptr<std::vector<float>> getCoefficients() = 0;
-    virtual float eval_basis(const glm::vec3& V, int idx) const = 0;
+    virtual void evalBasisArray(const glm::vec3& V, std::vector<float>& array) const = 0;
     virtual std::string getName() const = 0;
 };

@@ -5,8 +5,6 @@ set(CMAKE_CXX_STANDARD 14)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-FIND_PACKAGE( Boost REQUIRED )
-INCLUDE_DIRECTORIES( "/usr/include/boost" )
 FIND_PACKAGE(GSL REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -30,4 +28,4 @@ add_executable(sh_fit_cpp
         Test.h
         Numpy.h)
 
-TARGET_LINK_LIBRARIES( sh_fit_cpp LINK_PUBLIC ${Boost_LIBRARIES} GSL::gsl Threads::Threads)
+TARGET_LINK_LIBRARIES( sh_fit_cpp LINK_PUBLIC GSL::gsl Threads::Threads)

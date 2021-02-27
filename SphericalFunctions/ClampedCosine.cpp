@@ -26,15 +26,14 @@ std::shared_ptr<std::vector<float>> ClampedCosine::getCoefficients() {
 
 
 float ClampedCosine::eval(const glm::vec3& V) const {
-    return m_amplitude * eval_basis(V, 0);
+    auto eval_array = std::vector<float>(1);
+    evalBasisArray(V, eval_array);
+    return m_amplitude * eval_array[0];
 }
 
 
-float ClampedCosine::eval_basis(const glm::vec3& V, int idx) const {
-    if (idx != 0) {
-        printf("error, clamped cosine can only be evaluated for index 0");
-        return 0.f;
-    }
-    return fmaxf(V.z, 0.f) / M_PIf32;
+void ClampedCosine::evalBasisArray(const glm::vec3& V, std::vector<float> &array) const {
+	assert(!array.empty());
+	array[0] = fmaxf(V.z, 0.f) / M_PIf32;
 }
 

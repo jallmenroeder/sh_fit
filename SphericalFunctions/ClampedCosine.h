@@ -22,7 +22,7 @@ public:
 
     float eval(const glm::vec3& V) const override;
 
-    float eval_basis(const glm::vec3& V, int idx) const override;
+    void evalBasisArray(const glm::vec3& V, std::vector<float>& array) const override;
 
 private:
     float m_amplitude;
