@@ -93,9 +93,9 @@ void ThreadPool::infiniteLoopFunction() {
             int column = 2; int row = 0;
             for (int i = 0; i < 4; i++) {
                 m_inv_matrices[
-                        m_LUT_DIMENSION * 4 * idx.view
-                        + 4 * idx.roughness
-                        + i] = (*inv_mat)[column][row];
+                        m_LUT_DIMENSION * 4 * idx.roughness
+                        + 4 * idx.view
+                        + i] = (*inv_mat)[row][column];
                 column += 2;
                 if (column > 2) {
                     column = column % 3;
