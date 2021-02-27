@@ -186,8 +186,8 @@ double LTSF::minimizeFunc(const gsl_vector* x, void* params) {
                 0.f, gsl_vector_get(x, 2), 0.f,
                 gsl_vector_get(x, 3), 0.f, 1.f);
     ltsf->update(M);
-    auto error = ltsf->findSphericalExpansion();
-    return error != error ? std::numeric_limits<double>::max() : error;
+    ltsf->m_resiudal = (float)ltsf->findSphericalExpansion();
+    return ltsf->m_resiudal != ltsf->m_resiudal ? std::numeric_limits<double>::max() : ltsf->m_resiudal;
 }
 
 

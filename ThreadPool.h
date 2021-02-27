@@ -28,8 +28,8 @@ public:
     void execute(const SphericalFunction& spherical_function);
 
 private:
-    void infiniteLoopFunction();
-    void addLTSF(std::unique_ptr<LTSF> ltsf);
+    void threadLoop();
+    void persistData(const LTSF& ltsf);
 
     std::queue<std::unique_ptr<LTSF>> m_queue;
     std::mutex m_queue_mutex;
@@ -39,6 +39,7 @@ private:
     std::unique_ptr<float[]> m_matrices;
     std::unique_ptr<float[]> m_inv_matrices;
     std::unique_ptr<float[]> m_coefficients;
+    std::unique_ptr<float[]> m_residual;
     std::mutex m_data_mutex;
 
     const int m_LUT_DIMENSION;
