@@ -6,7 +6,11 @@
 
 #include <glm/glm.hpp>
 
-constexpr int NUM_SAMPLES = 64;
+// fitting config
+constexpr int NUM_SAMPLES = 50;
+constexpr int ITERATIONS = 400;
+constexpr double TOLERANCE = 1e-5;
+constexpr float STEP_SIZE = 0.05f;
 
 struct Spherical {
     float theta, phi;

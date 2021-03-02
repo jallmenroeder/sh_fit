@@ -205,7 +205,7 @@ void LTSF::findFit() {
     gsl_vector_set(m_multimin_x, 3, (*m_M)[2][0]);
 
     // Set initial step size
-    gsl_vector_set_all(m_multimin_step_size, 0.05f);
+    gsl_vector_set_all(m_multimin_step_size, STEP_SIZE);
 
     // Initialize method and iterate
     minex_func.n = 4;
@@ -223,9 +223,9 @@ void LTSF::findFit() {
             break;
 
         size = gsl_multimin_fminimizer_size(m_multimin_workspace);
-        status = gsl_multimin_test_size(size, 1e-7);
+        status = gsl_multimin_test_size(size, TOLERANCE);
     }
-    while (status == GSL_CONTINUE && iter < 400);
+    while (status == GSL_CONTINUE && iter < ITERATIONS);
 
     if (status == GSL_SUCCESS) {
 		printf("Found fit for idx: v_%d, r_%d\n", m_idx.view, m_idx.roughness);
