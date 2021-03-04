@@ -5,16 +5,22 @@
 #include "ThreadPool.h"
 
 #include "SphericalFunctions/LTSF.h"
+#include "Util.h"
 
 #include "Numpy.h"
 
 #include <thread>
 
 
-ThreadPool::ThreadPool(int LUT_dimension)
-: m_LUT_DIMENSION(LUT_dimension),
-  m_NUM_THREADS(std::thread::hardware_concurrency()) {
-//  m_NUM_THREADS(1) {
+ThreadPool::ThreadPool()
+        : m_LUT_DIMENSION(LUT_DIMENSION),
+          m_NUM_THREADS(std::thread::hardware_concurrency()) {
+    printf("number of threads: %d\n", m_NUM_THREADS);
+}
+
+ThreadPool::ThreadPool(int num_threads)
+: m_LUT_DIMENSION(LUT_DIMENSION),
+  m_NUM_THREADS(num_threads) {
     printf("number of threads: %d\n", m_NUM_THREADS);
 }
 

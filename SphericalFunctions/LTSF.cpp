@@ -34,6 +34,7 @@ LTSF::LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat
 	m_gsl_cov = gsl_matrix_alloc(columns, columns);
 	m_gsl_target_vector = gsl_vector_alloc(rows);
 	m_gsl_coefficients = gsl_vector_alloc(columns);
+	m_gsl_weights = gsl_vector_alloc(rows);
 	m_workspace = gsl_multifit_linear_alloc(rows, columns);
 
 	// init multimin
@@ -139,9 +140,10 @@ double LTSF::findSphericalExpansion() {
 				float jacobian;
 				evalLtsfBasisArray(V, m_basis_eval, jacobian);
                 for (int column_idx = 0; column_idx < columns; column_idx++) {
-					gsl_matrix_set(m_gsl_mat, row_idx, column_idx, m_basis_eval[column_idx] * jacobian * weight);
+					gsl_matrix_set(m_gsl_mat, row_idx, column_idx, m_basis_eval[column_idx] * jacobian);
                 }
-                gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
+                gsl_vector_set(m_gsl_target_vector, row_idx, eval_target);
+                gsl_vector_set(m_gsl_weights, row_idx, weight);
             }
 
             row_idx++;
@@ -157,9 +159,10 @@ double LTSF::findSphericalExpansion() {
                 float jacobian;
                 evalLtsfBasisArray(V, m_basis_eval, jacobian);
                 for (int column_idx = 0; column_idx < columns; column_idx++) {
-                    gsl_matrix_set(m_gsl_mat, row_idx, column_idx, m_basis_eval[column_idx] * jacobian * weight);
+                    gsl_matrix_set(m_gsl_mat, row_idx, column_idx, m_basis_eval[column_idx] * jacobian);
                 }
-                gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
+                gsl_vector_set(m_gsl_target_vector, row_idx, eval_target);
+                gsl_vector_set(m_gsl_weights, row_idx, weight);
             }
             row_idx++;
         }
@@ -167,7 +170,7 @@ double LTSF::findSphericalExpansion() {
 
     // initialise gsl linear least squares solver and solve
     double chi_squared;
-    gsl_multifit_linear(m_gsl_mat, m_gsl_target_vector, m_gsl_coefficients, m_gsl_cov, &chi_squared, m_workspace);
+    gsl_multifit_wlinear(m_gsl_mat, m_gsl_weights, m_gsl_target_vector, m_gsl_coefficients, m_gsl_cov, &chi_squared, m_workspace);
 
     // set fitted coefficients to spherical function
     auto coefficients = std::make_unique<std::vector<float>>(columns);
@@ -182,11 +185,14 @@ double LTSF::findSphericalExpansion() {
 
 double LTSF::minimizeFunc(const gsl_vector* x, void* params) {
     auto ltsf = static_cast<LTSF*>(params);
+    // set linear new parameters
     glm::mat3 M(gsl_vector_get(x, 0), 0.f, gsl_vector_get(x, 1),
                 0.f, gsl_vector_get(x, 2), 0.f,
                 gsl_vector_get(x, 3), 0.f, 1.f);
     ltsf->update(M);
+    // find optimal coefficients for M as linear least squares problem
     ltsf->m_resiudal = (float)ltsf->findSphericalExpansion();
+    // handle NaN, return residual of fitting
     return ltsf->m_resiudal != ltsf->m_resiudal ? std::numeric_limits<double>::max() : ltsf->m_resiudal;
 }
 

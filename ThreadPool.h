@@ -24,7 +24,8 @@ class LTSF;
  */
 class ThreadPool {
 public:
-    explicit ThreadPool(int LUT_dimension);
+    ThreadPool();
+    explicit ThreadPool(int num_threads);
     void execute(const SphericalFunction& spherical_function);
 
 private:

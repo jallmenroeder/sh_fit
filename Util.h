@@ -11,6 +11,7 @@ constexpr int NUM_SAMPLES = 50;
 constexpr int ITERATIONS = 400;
 constexpr double TOLERANCE = 1e-5;
 constexpr float STEP_SIZE = 0.05f;
+constexpr int LUT_DIMENSION = 64;
 
 struct Spherical {
     float theta, phi;

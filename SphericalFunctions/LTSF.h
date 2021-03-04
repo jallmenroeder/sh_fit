@@ -73,6 +73,7 @@ private:
 	gsl_matrix* m_gsl_cov;
 	gsl_vector* m_gsl_target_vector;
 	gsl_vector* m_gsl_coefficients;
+	gsl_vector* m_gsl_weights;
 	gsl_multifit_linear_workspace* m_workspace;
 
 	// gsl multimin

@@ -10,10 +10,9 @@
 int main() {
     auto start = std::chrono::high_resolution_clock::now();
 
-    // this does NOT init 64 threads, it just says our LUT is 64x64
-    ThreadPool pool(64);
+    ThreadPool pool;
 //    SphericalFunction* sf = new SphericalHarmonics(2);
-    SphericalFunction* sf = new ClampedCosine(1.f);
+    SphericalFunction* sf = new ClampedCosine();
     pool.execute(*sf);
     delete sf;
     auto end = std::chrono::high_resolution_clock::now();

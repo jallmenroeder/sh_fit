@@ -10,7 +10,7 @@
 
 class ClampedCosine : public SphericalFunction {
 public:
-    explicit ClampedCosine(float amplitude) : m_amplitude(amplitude) {}
+    explicit ClampedCosine() : m_amplitude(1.f) {}
 
     std::unique_ptr<SphericalFunction> copy() const override;
 
