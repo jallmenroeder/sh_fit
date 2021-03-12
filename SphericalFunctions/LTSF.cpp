@@ -186,9 +186,9 @@ double LTSF::findSphericalExpansion() {
 double LTSF::minimizeFunc(const gsl_vector* x, void* params) {
     auto ltsf = static_cast<LTSF*>(params);
     // set linear new parameters
-    glm::mat3 M(gsl_vector_get(x, 0), 0.f, gsl_vector_get(x, 1),
+    glm::mat3 M(gsl_vector_get(x, 0), 0.f, gsl_vector_get(x, 3),
                 0.f, gsl_vector_get(x, 2), 0.f,
-                gsl_vector_get(x, 3), 0.f, 1.f);
+                gsl_vector_get(x, 1), 0.f, 1.f);
     ltsf->update(M);
     // find optimal coefficients for M as linear least squares problem
     ltsf->m_resiudal = (float)ltsf->findSphericalExpansion();
@@ -206,9 +206,9 @@ void LTSF::findFit() {
 
     // Starting point
     gsl_vector_set(m_multimin_x, 0, (*m_M)[0][0]);
-    gsl_vector_set(m_multimin_x, 1, (*m_M)[0][2]);
+    gsl_vector_set(m_multimin_x, 1, (*m_M)[2][0]);
     gsl_vector_set(m_multimin_x, 2, (*m_M)[1][1]);
-    gsl_vector_set(m_multimin_x, 3, (*m_M)[2][0]);
+    gsl_vector_set(m_multimin_x, 3, (*m_M)[0][2]);
 
     // Set initial step size
     gsl_vector_set_all(m_multimin_step_size, STEP_SIZE);
@@ -238,6 +238,14 @@ void LTSF::findFit() {
     } else {
     	printf("Error, multimin did not converge for idx: v_%d, r_%d\n", m_idx.view, m_idx.roughness);
     }
+
+    // call function one more time so the correct coefficients are set
+    update(glm::mat3(
+            gsl_vector_get(m_multimin_x, 0), 0.f, gsl_vector_get(m_multimin_x, 3),
+            0.f, gsl_vector_get(m_multimin_x, 2), 0.f,
+            gsl_vector_get(m_multimin_x, 1), 0.f, 1.f
+            ));
+    findSphericalExpansion();
 }
 
 
