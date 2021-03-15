@@ -13,10 +13,6 @@
 #include <condition_variable>
 #include <glm/mat3x3.hpp>
 
-namespace {
-    template<class T> using vector_2d = std::vector<std::vector<std::shared_ptr<T>>>;
-}
-
 class LTSF;
 
 /**
