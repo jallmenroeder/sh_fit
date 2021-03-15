@@ -191,9 +191,9 @@ double LTSF::minimizeFunc(const gsl_vector* x, void* params) {
                 gsl_vector_get(x, 1), 0.f, 1.f);
     ltsf->update(M);
     // find optimal coefficients for M as linear least squares problem
-    ltsf->m_resiudal = (float)ltsf->findSphericalExpansion();
+    ltsf->m_residual = (float)ltsf->findSphericalExpansion();
     // handle NaN, return residual of fitting
-    return ltsf->m_resiudal != ltsf->m_resiudal ? std::numeric_limits<double>::max() : ltsf->m_resiudal;
+    return ltsf->m_residual != ltsf->m_residual ? std::numeric_limits<double>::max() : ltsf->m_residual;
 }
 
 

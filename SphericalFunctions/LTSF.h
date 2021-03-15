@@ -30,7 +30,7 @@ public:
     std::shared_ptr<glm::mat3> getInvLinearTransformation() const { return m_M_inv; };
     std::shared_ptr<std::vector<float>> getCoefficients() const { return m_spherical_function->getCoefficients(); }
     std::unique_ptr<SphericalFunction> getSphericalFunctionCopy() const;
-    float getResidual() const { return m_resiudal; }
+    float getResidual() const { return m_residual; }
 
     float eval(const glm::vec3& V) const override;
     float pdf(const glm::vec3& V) const override;
@@ -66,7 +66,7 @@ private:
     glm::vec3 m_view_dir;
     float m_roughness;
     std::vector<float> m_basis_eval;
-    float m_resiudal;
+    float m_residual;
 
     // gsl multifit
 	gsl_matrix* m_gsl_mat;
