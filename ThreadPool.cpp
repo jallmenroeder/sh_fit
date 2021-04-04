@@ -34,19 +34,22 @@ void ThreadPool::execute(const SphericalFunction& spherical_function) {
 
     // load initial parameters
     auto ltc_matrices = std::vector<double>();
-    aoba::LoadArrayFromNumpy("../cos_mat.npy", ltc_matrices);
+    aoba::LoadArrayFromNumpy("../cos_mat_frostbite.npy", ltc_matrices);
 
     // convert loaded data to right format
-    m_ltc_params.resize(m_LUT_DIMENSION);
-    for (int i = 0; i < m_LUT_DIMENSION; i++) {
-        Idx idx = {i, m_LUT_DIMENSION - 1};
-        for (int j = 0; j < 3; j++) {
-        	for (int k = 0; k < 3; k++) {
-        		m_ltc_params[i][j][k] = ltc_matrices[idx.view * m_LUT_DIMENSION * 3 * 3 + idx.roughness * 3 * 3 + j * 3 + k];
-        	}
+    m_ltc_params.resize(m_LUT_DIMENSION * m_LUT_DIMENSION);
+    for (int view_idx = 0; view_idx < m_LUT_DIMENSION; view_idx++) {
+        for (int roughness_idx = 0; roughness_idx < m_LUT_DIMENSION; roughness_idx++) {
+            Idx idx = {view_idx, roughness_idx};
+            for (int j = 0; j < 3; j++) {
+                for (int k = 0; k < 3; k++) {
+                    m_ltc_params[view_idx][k][j] = ltc_matrices[idx.view * m_LUT_DIMENSION * 3 * 3 +
+                                                                idx.roughness * 3 * 3 + j * 3 + k];
+                }
+            }
+            // add fitting tasks to execution queue
+            m_queue.emplace(new LTSF(spherical_function.copy(), m_ltc_params[view_idx], idx, m_LUT_DIMENSION));
         }
-        // add fitting tasks to execution queue
-        m_queue.emplace(new LTSF(spherical_function.copy(), m_ltc_params[i], idx, m_LUT_DIMENSION));
     }
 
     // start thread execution
@@ -61,10 +64,10 @@ void ThreadPool::execute(const SphericalFunction& spherical_function) {
 
     // save fitting data as numpy arrays
     auto func_name = spherical_function.getName();
-    aoba::SaveArrayAsNumpy(func_name + "_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 3, 3, m_matrices.get());
-    aoba::SaveArrayAsNumpy("inv_" + func_name + "_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 4, m_inv_matrices.get());
-    aoba::SaveArrayAsNumpy(func_name + "_coeff.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, spherical_function.numCoefficients(), m_coefficients.get());
-    aoba::SaveArrayAsNumpy(func_name + "_residual.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, m_residual.get());
+    aoba::SaveArrayAsNumpy(func_name + "_mat_ltc_init.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 3, 3, m_matrices.get());
+    aoba::SaveArrayAsNumpy("inv_" + func_name + "_mat_ltc_init.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 4, m_inv_matrices.get());
+    aoba::SaveArrayAsNumpy(func_name + "_coeff_ltc_init.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, spherical_function.numCoefficients(), m_coefficients.get());
+    aoba::SaveArrayAsNumpy(func_name + "_residual_ltc_init.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, m_residual.get());
 
     printf("Finished execution\n");
 }
@@ -86,23 +89,23 @@ void ThreadPool::threadLoop() {
         persistData(*ltsf);
 
         // enqueue next fit with lower roughness
-        Idx current_idx = ltsf->getIdx();
-    	glm::mat3 guess;
-    	if (current_idx.roughness <= 0) {
-			printf("finished view dir with index: %d\n", current_idx.view);
-			continue;
-    	} else {
-			current_idx.roughness--;
-			guess = *ltsf->getLinearTransformation();
-    	}
-        auto next = std::make_unique<LTSF>(ltsf->getSphericalFunctionCopy(),
-                                           guess,
-                                           current_idx,
-                                           m_LUT_DIMENSION);
-        {
-            std::unique_lock<std::mutex> lock(m_queue_mutex);
-            m_queue.push(std::move(next));
-        }
+//        Idx current_idx = ltsf->getIdx();
+//    	glm::mat3 guess;
+//    	if (current_idx.roughness <= 0) {
+//			printf("finished view dir with index: %d\n", current_idx.view);
+//			continue;
+//    	} else {
+//			current_idx.roughness--;
+//			guess = *ltsf->getLinearTransformation();
+//    	}
+//        auto next = std::make_unique<LTSF>(ltsf->getSphericalFunctionCopy(),
+//                                           guess,
+//                                           current_idx,
+//                                           m_LUT_DIMENSION);
+//        {
+//            std::unique_lock<std::mutex> lock(m_queue_mutex);
+//            m_queue.push(std::move(next));
+//        }
     }
 }
 
