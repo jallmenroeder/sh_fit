@@ -73,7 +73,7 @@ void ThreadPool::execute(const SphericalFunction& spherical_function) {
 void ThreadPool::threadLoop() {
     while(true) {
         // acquire next available LTSF from queue
-        std::unique_ptr<LTSF> ltsf;
+        uptr<LTSF> ltsf;
         {
             std::unique_lock<std::mutex> lock(m_queue_mutex);
             if (m_queue.empty()) break;

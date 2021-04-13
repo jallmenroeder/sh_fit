@@ -34,7 +34,7 @@ public:
     }
 
 
-    std::unique_ptr<SphericalFunction> copy() const override {
+    uptr<SphericalFunction> copy() const override {
         return std::make_unique<SphericalHarmonics>(m_ORDER);
     }
 
