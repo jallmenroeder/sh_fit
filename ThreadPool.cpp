@@ -5,12 +5,12 @@
 #include "ThreadPool.h"
 
 #include "SphericalFunctions/LTSF.h"
-#include "Util.h"
 
 #include "Numpy.h"
 
 #include <thread>
 
+constexpr int LUT_DIMENSION = 64;
 
 ThreadPool::ThreadPool()
         : m_LUT_DIMENSION(LUT_DIMENSION),

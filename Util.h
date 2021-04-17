@@ -7,13 +7,6 @@
 #include <glm/glm.hpp>
 #include <memory>
 
-// fitting config
-constexpr int NUM_SAMPLES = 50;
-constexpr int ITERATIONS = 400;
-constexpr double TOLERANCE = 1e-5;
-constexpr float STEP_SIZE = 0.05f;
-constexpr int LUT_DIMENSION = 64;
-
 template<class T> using uptr = std::unique_ptr<T>;
 
 struct Spherical {

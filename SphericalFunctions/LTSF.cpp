@@ -6,8 +6,13 @@
 
 #include <iostream>
 
-#include "../Util.h"
 #include "GGX_BRDF.h"
+
+// params for the non-linear optimization
+constexpr int NUM_SAMPLES = 50;
+constexpr int ITERATIONS = 400;
+constexpr double TOLERANCE = 1e-5;
+constexpr float STEP_SIZE = 0.05f;
 
 const float MIN_ROUGHNESS = 0.0001f;
 const float MAX_THETA = 1.57f;
