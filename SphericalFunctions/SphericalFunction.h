@@ -8,10 +8,12 @@
 #include <vector>
 #include <memory>
 
+#include "../Util.h"
+
 class SphericalFunction {
 public:
     virtual ~SphericalFunction() = default;
-    virtual std::unique_ptr<SphericalFunction> copy() const = 0;
+    virtual uptr<SphericalFunction> copy() const = 0;
     virtual float eval(const glm::vec3& V) const = 0;
     virtual int numCoefficients() const = 0;
     virtual void setCoefficients(std::shared_ptr<std::vector<float>> coefficients) = 0;

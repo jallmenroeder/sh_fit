@@ -5,12 +5,12 @@
 #include "ThreadPool.h"
 
 #include "SphericalFunctions/LTSF.h"
-#include "Util.h"
 
 #include "Numpy.h"
 
 #include <thread>
 
+constexpr int LUT_DIMENSION = 64;
 
 ThreadPool::ThreadPool()
         : m_LUT_DIMENSION(LUT_DIMENSION),
@@ -73,7 +73,7 @@ void ThreadPool::execute(const SphericalFunction& spherical_function) {
 void ThreadPool::threadLoop() {
     while(true) {
         // acquire next available LTSF from queue
-        std::unique_ptr<LTSF> ltsf;
+        uptr<LTSF> ltsf;
         {
             std::unique_lock<std::mutex> lock(m_queue_mutex);
             if (m_queue.empty()) break;

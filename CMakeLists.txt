@@ -13,18 +13,14 @@ add_executable(sh_fit_cpp
         main.cpp
         Util.h
         SphericalFunctions/GGX_BRDF.h
-        SphericalFunctions/GGX_BRDF.cpp
         SphericalFunctions/SphericalHarmonics.h
-        SphericalFunctions/SphericalHarmonics.cpp
         SphericalFunctions/SphericalFunction.h
         SphericalFunctions/ClampedCosine.h
-        SphericalFunctions/ClampedCosine.cpp
         SphericalFunctions/BRDF.h
         SphericalFunctions/LTSF.cpp
         SphericalFunctions/LTSF.h
         ThreadPool.cpp
         ThreadPool.h
-        Test.cpp
         Test.h
         Numpy.h)
 

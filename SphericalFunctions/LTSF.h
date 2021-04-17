@@ -20,7 +20,7 @@ struct Idx {
 
 class LTSF : public BRDF {
 public:
-    LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat3& M, Idx idx, int LUT_dimension);
+    LTSF(uptr<SphericalFunction> spherical_function, const glm::mat3& M, Idx idx, int LUT_dimension);
     ~LTSF();
 
     void update(const glm::mat3& M);
@@ -29,7 +29,7 @@ public:
     std::shared_ptr<glm::mat3> getLinearTransformation() const { return m_M; };
     std::shared_ptr<glm::mat3> getInvLinearTransformation() const { return m_M_inv; };
     std::shared_ptr<std::vector<float>> getCoefficients() const { return m_spherical_function->getCoefficients(); }
-    std::unique_ptr<SphericalFunction> getSphericalFunctionCopy() const;
+    uptr<SphericalFunction> getSphericalFunctionCopy() const;
     float getResidual() const { return m_residual; }
 
     float eval(const glm::vec3& V) const override;
@@ -57,8 +57,8 @@ public:
 private:
     glm::vec3 linearly_transform_vec(const glm::vec3& V, float& jacobian) const;
 
-    std::unique_ptr<SphericalFunction> m_spherical_function;
-    std::unique_ptr<BRDF> m_target_function;
+    uptr<SphericalFunction> m_spherical_function;
+    uptr<BRDF> m_target_function;
     std::shared_ptr<glm::mat3> m_M;
     std::shared_ptr<glm::mat3> m_M_inv;
     float m_det_M_inv;

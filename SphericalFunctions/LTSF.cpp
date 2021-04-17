@@ -6,13 +6,18 @@
 
 #include <iostream>
 
-#include "../Util.h"
 #include "GGX_BRDF.h"
+
+// params for the non-linear optimization
+constexpr int NUM_SAMPLES = 50;
+constexpr int ITERATIONS = 400;
+constexpr double TOLERANCE = 1e-5;
+constexpr float STEP_SIZE = 0.05f;
 
 const float MIN_ROUGHNESS = 0.0001f;
 const float MAX_THETA = 1.57f;
 
-LTSF::LTSF(std::unique_ptr<SphericalFunction> spherical_function, const glm::mat3& M, Idx idx, int LUT_dimension) :
+LTSF::LTSF(uptr<SphericalFunction> spherical_function, const glm::mat3& M, Idx idx, int LUT_dimension) :
         m_spherical_function(std::move(spherical_function)),
         m_M(std::make_shared<glm::mat3>(M)),
         m_M_inv(std::make_shared<glm::mat3>(glm::inverse(M))),
@@ -70,7 +75,7 @@ void LTSF::update(const glm::mat3 &M) {
 }
 
 
-std::unique_ptr<SphericalFunction> LTSF::getSphericalFunctionCopy() const {
+uptr<SphericalFunction> LTSF::getSphericalFunctionCopy() const {
     return m_spherical_function->copy();
 }
 
