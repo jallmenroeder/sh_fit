@@ -5,9 +5,13 @@ set(CMAKE_CXX_STANDARD 14)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+include_directories(${PROJECT_SOURCE_DIR})
+
 FIND_PACKAGE(GSL REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+
+add_subdirectory(matplotplusplus)
 
 add_executable(sh_fit_cpp
         main.cpp
@@ -22,6 +26,6 @@ add_executable(sh_fit_cpp
         ThreadPool.cpp
         ThreadPool.h
         Test.h
-        Numpy.h)
+        Numpy.h plotting/Plotter.cpp plotting/Plotter.h)
 
-TARGET_LINK_LIBRARIES( sh_fit_cpp LINK_PUBLIC GSL::gsl Threads::Threads)
+TARGET_LINK_LIBRARIES(sh_fit_cpp LINK_PUBLIC GSL::gsl Threads::Threads matplot)
