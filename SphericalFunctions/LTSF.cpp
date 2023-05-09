@@ -5,16 +5,17 @@
 #include "LTSF.h"
 
 #include <iostream>
+#include <random>
 
 #include "GGX_BRDF.h"
 
 // params for the non-linear optimization
-constexpr int NUM_SAMPLES = 50;
+constexpr int NUM_SAMPLES = 2048;
 constexpr int ITERATIONS = 400;
 constexpr double TOLERANCE = 1e-5;
 constexpr float STEP_SIZE = 0.05f;
 
-const float MIN_ROUGHNESS = 0.0001f;
+const float MIN_ROUGHNESS = 0.001f;
 const float MAX_THETA = 1.57f;
 
 LTSF::LTSF(uptr<SphericalFunction> spherical_function, const glm::mat3& M, Idx idx, int LUT_dimension) :
@@ -32,7 +33,7 @@ LTSF::LTSF(uptr<SphericalFunction> spherical_function, const glm::mat3& M, Idx i
     m_basis_eval = std::vector<float>(m_spherical_function->numCoefficients());
 
     // init multifit
-	int rows = NUM_SAMPLES * NUM_SAMPLES * 2;
+	int rows = NUM_SAMPLES * 2;
 	int columns = m_spherical_function->numCoefficients();
 
 	m_gsl_mat = gsl_matrix_alloc(rows, columns);
@@ -124,50 +125,51 @@ glm::vec3 LTSF::sample(const glm::vec2& uv) const {
 
 
 double LTSF::findSphericalExpansion() {
+    // init RNG
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0, 1.0);
+
     int columns = m_spherical_function->numCoefficients();
     int row_idx = 0;
 
-    for (int i = 0; i < NUM_SAMPLES; i++) {
-        for (int j = 0; j < NUM_SAMPLES; j++) {
-            const float u = ((float)j + 0.5f) / (float)NUM_SAMPLES;
-            const float v = ((float)i + 0.5f) / (float)NUM_SAMPLES;
-            glm::vec2 uv(u, v);
+    for (int j = 0; j < NUM_SAMPLES; j++) {
+        glm::vec2 uv(dist(mt), dist(mt));
 
-            // sample LTSF
-            {
-                glm::vec3 V = sample(uv);
-                float pdf_target = m_target_function->pdf(V);
-                float eval_target = m_target_function->eval(V);
-                float pdf_ltsf = pdf(V);
-                float weight = pdf_ltsf / (pdf_target + pdf_ltsf);
+        // sample LTSF
+        {
+            glm::vec3 V = sample(uv);
+            float pdf_target = m_target_function->pdf(V);
+            float eval_target = m_target_function->eval(V);
+            float pdf_ltsf = pdf(V);
+            float weight = pdf_ltsf / (pdf_target + pdf_ltsf);
 
-				float jacobian;
-				evalLtsfBasisArray(V, m_basis_eval, jacobian);
-                for (int column_idx = 0; column_idx < columns; column_idx++) {
-					gsl_matrix_set(m_gsl_mat, row_idx, column_idx, m_basis_eval[column_idx] * jacobian * weight);
-                }
-                gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
+            float jacobian;
+            evalLtsfBasisArray(V, m_basis_eval, jacobian);
+            for (int column_idx = 0; column_idx < columns; column_idx++) {
+                gsl_matrix_set(m_gsl_mat, row_idx, column_idx, m_basis_eval[column_idx] * jacobian * weight);
             }
-
-            row_idx++;
-
-            // sample BRDF
-            {
-                glm::vec3 V = m_target_function->sample(uv);
-                float pdf_target = m_target_function->pdf(V);
-                float eval_target = m_target_function->eval(V);
-                float pdf_ltsf = pdf(V);
-                float weight = pdf_target / (pdf_target + pdf_ltsf);
-
-                float jacobian;
-                evalLtsfBasisArray(V, m_basis_eval, jacobian);
-                for (int column_idx = 0; column_idx < columns; column_idx++) {
-                    gsl_matrix_set(m_gsl_mat, row_idx, column_idx, m_basis_eval[column_idx] * jacobian * weight);
-                }
-                gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
-            }
-            row_idx++;
+            gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
         }
+
+        row_idx++;
+
+        // sample BRDF
+        {
+            glm::vec3 V = m_target_function->sample(uv);
+            float pdf_target = m_target_function->pdf(V);
+            float eval_target = m_target_function->eval(V);
+            float pdf_ltsf = pdf(V);
+            float weight = pdf_target / (pdf_target + pdf_ltsf);
+
+            float jacobian;
+            evalLtsfBasisArray(V, m_basis_eval, jacobian);
+            for (int column_idx = 0; column_idx < columns; column_idx++) {
+                gsl_matrix_set(m_gsl_mat, row_idx, column_idx, m_basis_eval[column_idx] * jacobian * weight);
+            }
+            gsl_vector_set(m_gsl_target_vector, row_idx, eval_target * weight);
+        }
+        row_idx++;
     }
 
     // initialise gsl linear least squares solver and solve
@@ -181,7 +183,7 @@ double LTSF::findSphericalExpansion() {
     }
     m_spherical_function->setCoefficients(std::move(coefficients));
 
-    return chi_squared;
+    return chi_squared / NUM_SAMPLES / 2;
 }
 
 
