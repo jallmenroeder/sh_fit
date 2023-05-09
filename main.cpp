@@ -17,6 +17,7 @@ int main() {
     delete sf;
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-    printf("Duration: %f min", duration.count() / 60.f);
+    printf("Duration: %f min\n", duration.count() / 60.f);
+    pool.plotResidual(10.f);
     return 0;
 }

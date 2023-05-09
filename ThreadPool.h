@@ -23,6 +23,7 @@ public:
     ThreadPool();
     explicit ThreadPool(int num_threads);
     void execute(const SphericalFunction& spherical_function);
+    void plotResidual(float max);
 
 private:
     void threadLoop();

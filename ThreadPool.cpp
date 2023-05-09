@@ -67,8 +67,6 @@ void ThreadPool::execute(const SphericalFunction& spherical_function) {
     aoba::SaveArrayAsNumpy(func_name + "_coeff.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, spherical_function.numCoefficients(), m_coefficients.get());
     aoba::SaveArrayAsNumpy(func_name + "_residual.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, m_residual.get());
 
-    Plotter::plotResidual(m_residual.get(), m_LUT_DIMENSION, 10.f);
-
     printf("Finished execution\n");
 }
 
@@ -154,4 +152,8 @@ void ThreadPool::persistData(const LTSF& ltsf) {
 
     // persist residual
     m_residual[m_LUT_DIMENSION * idx.view + idx.roughness] = ltsf.getResidual();
+}
+
+void ThreadPool::plotResidual(float max) {
+    Plotter::plotResidual(m_residual.get(), m_LUT_DIMENSION, max);
 }
