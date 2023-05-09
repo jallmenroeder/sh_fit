@@ -5,6 +5,7 @@
 #include "ThreadPool.h"
 
 #include "SphericalFunctions/LTSF.h"
+#include "plotting/Plotter.h"
 
 #include "Numpy.h"
 
@@ -65,6 +66,8 @@ void ThreadPool::execute(const SphericalFunction& spherical_function) {
     aoba::SaveArrayAsNumpy("inv_" + func_name + "_mat.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, 4, m_inv_matrices.get());
     aoba::SaveArrayAsNumpy(func_name + "_coeff.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, spherical_function.numCoefficients(), m_coefficients.get());
     aoba::SaveArrayAsNumpy(func_name + "_residual.npy", m_LUT_DIMENSION, m_LUT_DIMENSION, m_residual.get());
+
+    Plotter::plotResidual(m_residual.get(), m_LUT_DIMENSION, 10.f);
 
     printf("Finished execution\n");
 }
