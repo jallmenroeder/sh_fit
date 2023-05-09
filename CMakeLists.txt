@@ -23,9 +23,11 @@ add_executable(sh_fit_cpp
         SphericalFunctions/BRDF.h
         SphericalFunctions/LTSF.cpp
         SphericalFunctions/LTSF.h
+        plotting/Plotter.cpp
+        plotting/Plotter.h
         ThreadPool.cpp
         ThreadPool.h
         Test.h
-        Numpy.h plotting/Plotter.cpp plotting/Plotter.h)
+        Numpy.h)
 
 TARGET_LINK_LIBRARIES(sh_fit_cpp LINK_PUBLIC GSL::gsl Threads::Threads matplot)
