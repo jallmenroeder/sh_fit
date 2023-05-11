@@ -38,17 +38,20 @@ public:
 
 
     float eval(const glm::vec3& V) const override {
-        auto eval_array = std::vector<float>(1);
-        evalBasisArray(V, eval_array);
-        return m_amplitude * eval_array[0];
+        return m_amplitude * clampedCos(V);
     }
 
 
     void evalBasisArray(const glm::vec3& V, std::vector<float> &array) const override {
         assert(!array.empty());
-        array[0] = fmaxf(V.z, 0.f) / M_PIf32;
+        assert(array.size() == 1);
+        array[0] = clampedCos(V);
     }
 
 private:
+    static float clampedCos(const glm::vec3& V) {
+        return fmaxf(V.z, 0.f) / M_PIf32;
+    }
+
     float m_amplitude;
 };
