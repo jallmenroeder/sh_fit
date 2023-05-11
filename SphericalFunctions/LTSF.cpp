@@ -82,6 +82,7 @@ uptr<SphericalFunction> LTSF::getSphericalFunctionCopy() const {
 
 
 float LTSF::eval(const glm::vec3& V) const {
+    if (V.z < 0.f) return 0.;
     // evaluate original spherical function
     float jacobian;
     glm::vec3 trans_V = linearly_transform_vec(V, jacobian);
